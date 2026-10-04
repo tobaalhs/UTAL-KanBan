@@ -1,15 +1,20 @@
 const express = require('express');
 const cors = require('cors');
+const connectDB = require('./config/db.config');
+
 const app = express();
 const port = 3000;
 
-// Importar rutas
+// Conectar a la base de datos
+connectDB();
+
+// Importacion de las rutas
 const usuarioRoutes = require('./routes/usuario.routes');
 
 app.use(cors());
 app.use(express.json());
 
-// Usar las rutas
+
 app.use('/api/usuarios', usuarioRoutes);
 
 app.get('/', (req, res) => {

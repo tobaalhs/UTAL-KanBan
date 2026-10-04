@@ -2,9 +2,9 @@ const usuarioService = require('../services/usuario.service');
 
 const registro = async (req, res) => {
     try {
-        const { nombre, email, password } = req.body;
+        const { name, email, password } = req.body;
 
-        if (!nombre || !email || !password) {
+        if (!name || !email || !password) {
             return res.status(400).json({ mensaje: 'Todos los campos son obligatorios' });
         }
 
