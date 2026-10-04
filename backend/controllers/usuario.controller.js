@@ -23,6 +23,31 @@ const registro = async (req, res) => {
     }
 };
 
+const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ mensaje: 'Email y password son obligatorios' });
+        }
+
+        const { usuario, token } = await usuarioService.loginUsuario(email, password);
+
+        res.status(200).json({
+            mensaje: 'Login exitoso',
+            token,
+            usuario: {
+                _id: usuario._id,
+                nombre: usuario.nombre,
+                email: usuario.email
+            }
+        });
+    } catch (error) {
+        res.status(401).json({ mensaje: error.message });
+    }
+};
+
 module.exports = {
-    registro
+    registro,
+    login
 };

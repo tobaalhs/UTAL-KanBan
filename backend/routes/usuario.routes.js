@@ -1,11 +1,9 @@
 const { Router } = require('express');
-const { registro } = require('../controllers/usuario.controller');
+const { registro, login } = require('../controllers/usuario.controller');
 
 const router = Router();
 
-router.post('/login', (req, res) => {
-    const { } = req.body;
-});
+router.post('/login', login);
 
 router.post('/registro', registro);
 
