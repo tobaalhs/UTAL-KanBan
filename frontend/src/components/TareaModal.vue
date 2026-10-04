@@ -2,6 +2,8 @@
 import { reactive, ref } from 'vue'
 import VentanaModal from './VentanaModal.vue'
 import Icono from './Icono.vue'
+import EstadoIcono from './EstadoIcono.vue'
+import PrioridadIndicador from './PrioridadIndicador.vue'
 import { mensajeDeError } from '../api/http'
 import { PRIORIDADES } from '../services/tareas'
 
@@ -51,7 +53,10 @@ const borrar = () => {
 <template>
   <VentanaModal :titulo="tarea ? 'Editar tarea' : 'Nueva tarea'" @cerrar="emit('cerrar')">
     <form class="form" @submit.prevent="enviar">
-      <p v-if="error" class="alerta alerta-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="alerta alerta-error" role="alert"><Icono nombre="alerta" :tamano="16" />{{ error }}</p>
+      <p v-if="tarea" class="estado-actual">
+        <EstadoIcono :estado="tarea.estado" :tamano="14" /> {{ tarea.estado }}
+      </p>
       <div class="campo">
         <label for="tarea-titulo">Título</label>
         <input id="tarea-titulo" v-model="form.titulo" maxlength="100" required />
@@ -60,12 +65,15 @@ const borrar = () => {
         <label for="tarea-descripcion">Descripción</label>
         <textarea id="tarea-descripcion" v-model="form.descripcion" maxlength="500" />
       </div>
-      <div class="campo">
-        <label for="tarea-prioridad">Prioridad</label>
-        <select id="tarea-prioridad" v-model="form.prioridad">
-          <option v-for="p in PRIORIDADES" :key="p" :value="p">{{ p }}</option>
-        </select>
-      </div>
+      <fieldset class="campo">
+        <legend class="etiqueta">Prioridad</legend>
+        <div class="segmentado">
+          <label v-for="p in PRIORIDADES" :key="p" :class="{ activo: form.prioridad === p }">
+            <input v-model="form.prioridad" type="radio" name="prioridad" :value="p" />
+            <PrioridadIndicador :prioridad="p" />
+          </label>
+        </div>
+      </fieldset>
       <div class="form-acciones">
         <button v-if="tarea && puedeEliminar" type="button" class="btn btn-peligro izquierda" :disabled="ocupado" @click="borrar">
           <Icono nombre="eliminar" :tamano="16" /> Eliminar
@@ -82,5 +90,60 @@ const borrar = () => {
 <style scoped>
 .izquierda {
   margin-right: auto;
+}
+.estado-actual {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.4rem;
+  margin: -0.4rem 0 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--color-borde-fuerte);
+  border-radius: 999px;
+  color: var(--color-texto-2);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+legend {
+  margin-bottom: 0.4rem;
+  padding: 0;
+}
+.segmentado {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--color-fondo);
+}
+.segmentado label {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border-radius: 7px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: background var(--transicion), opacity var(--transicion);
+}
+.segmentado label:hover {
+  opacity: 0.85;
+}
+.segmentado label.activo {
+  background: var(--color-superficie-3);
+  opacity: 1;
+}
+.segmentado label:has(input:focus-visible) {
+  outline: 2px solid var(--color-primario);
+}
+.segmentado input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 </style>

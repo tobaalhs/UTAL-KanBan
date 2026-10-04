@@ -11,10 +11,14 @@ import { fallar, guardarDb, leerDb, nuevoId, responder, usuariosMock } from './m
 
 const db = () => leerDb(useAuthStore().usuario)
 
-const conConteo = (tablero) => ({
-  ...tablero,
-  cantidadTareas: db().tareas.filter((t) => t.tablero === tablero._id).length,
-})
+const conConteo = (tablero) => {
+  const tareas = db().tareas.filter((t) => t.tablero === tablero._id)
+  return {
+    ...tablero,
+    cantidadTareas: tareas.length,
+    cantidadTerminadas: tareas.filter((t) => t.estado === 'Terminado').length,
+  }
+}
 
 const buscar = (id) => db().tableros.find((t) => t._id === id)
 

@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../components/AuthLayout.vue'
+import Icono from '../components/Icono.vue'
 import { useAuthStore } from '../stores/auth'
 import { mensajeDeError } from '../api/http'
 
@@ -30,23 +31,23 @@ const enviar = async () => {
 <template>
   <AuthLayout titulo="Iniciar sesión" subtitulo="Bienvenido de vuelta">
     <form class="form" @submit.prevent="enviar">
-      <p v-if="route.query.registrado" class="alerta alerta-exito">Cuenta creada, ya puedes iniciar sesión.</p>
-      <p v-if="error" class="alerta alerta-error" role="alert">{{ error }}</p>
+      <p v-if="route.query.registrado" class="alerta alerta-exito"><Icono nombre="exito" :tamano="16" />Cuenta creada, ya puedes iniciar sesión.</p>
+      <p v-if="error" class="alerta alerta-error" role="alert"><Icono nombre="alerta" :tamano="16" />{{ error }}</p>
 
       <div class="campo">
         <label for="email">Correo electrónico</label>
-        <input id="email" v-model.trim="form.email" type="email" autocomplete="email" required />
+        <input id="email" v-model.trim="form.email" type="email" autocomplete="email" placeholder="nombre@utal.cl" required />
       </div>
       <div class="campo">
         <label for="password">Contraseña</label>
-        <input id="password" v-model="form.password" type="password" autocomplete="current-password" required />
+        <input id="password" v-model="form.password" type="password" autocomplete="current-password" placeholder="••••••••" required />
       </div>
       <label class="recordar">
         <input v-model="form.recordar" type="checkbox" />
         Recordar sesión
       </label>
 
-      <button class="btn btn-primario" type="submit" :disabled="cargando">
+      <button class="btn btn-primario btn-ancho" type="submit" :disabled="cargando">
         {{ cargando ? 'Ingresando...' : 'Iniciar sesión' }}
       </button>
       <p class="cambiar">¿No tienes cuenta? <RouterLink :to="{ name: 'registro' }">Regístrate</RouterLink></p>

@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../components/AuthLayout.vue'
+import Icono from '../components/Icono.vue'
 import { useAuthStore } from '../stores/auth'
 import { mensajeDeError } from '../api/http'
 
@@ -37,26 +38,26 @@ const enviar = async () => {
 <template>
   <AuthLayout titulo="Crear cuenta" subtitulo="Organiza tus tareas en equipo">
     <form class="form" @submit.prevent="enviar">
-      <p v-if="error" class="alerta alerta-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="alerta alerta-error" role="alert"><Icono nombre="alerta" :tamano="16" />{{ error }}</p>
 
       <div class="campo">
         <label for="nombre">Nombre de usuario</label>
-        <input id="nombre" v-model.trim="form.nombre" type="text" autocomplete="name" required />
+        <input id="nombre" v-model.trim="form.nombre" type="text" autocomplete="name" placeholder="Tu nombre" required />
       </div>
       <div class="campo">
         <label for="email">Correo electrónico</label>
-        <input id="email" v-model.trim="form.email" type="email" autocomplete="email" required />
+        <input id="email" v-model.trim="form.email" type="email" autocomplete="email" placeholder="nombre@utal.cl" required />
       </div>
       <div class="campo">
         <label for="password">Contraseña</label>
-        <input id="password" v-model="form.password" type="password" autocomplete="new-password" required />
+        <input id="password" v-model="form.password" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required />
       </div>
       <div class="campo">
         <label for="confirmar">Confirmar contraseña</label>
         <input id="confirmar" v-model="form.confirmar" type="password" autocomplete="new-password" required />
       </div>
 
-      <button class="btn btn-primario" type="submit" :disabled="cargando">
+      <button class="btn btn-primario btn-ancho" type="submit" :disabled="cargando">
         {{ cargando ? 'Creando cuenta...' : 'Registrarse' }}
       </button>
       <p class="cambiar">¿Ya tienes cuenta? <RouterLink :to="{ name: 'login' }">Inicia sesión</RouterLink></p>

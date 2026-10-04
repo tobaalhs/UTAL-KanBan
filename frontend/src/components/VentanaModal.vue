@@ -43,18 +43,32 @@ onUnmounted(() => window.removeEventListener('keydown', alPresionar))
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgb(5 6 12 / 0.7);
-  backdrop-filter: blur(2px);
+  background: rgb(5 6 12 / 0.65);
+  backdrop-filter: blur(4px);
+  animation: aparecer 0.15s ease-out;
 }
 .modal {
   width: 100%;
-  max-width: 460px;
+  max-width: 480px;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
-  padding: 1.5rem;
-  border-radius: 14px;
-  border: 1px solid var(--color-borde);
+  padding: 1.4rem 1.5rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--color-borde-fuerte);
   background: var(--color-superficie);
+  box-shadow: var(--sombra-elevada);
+  animation: entrar 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
 }
 header {
   display: flex;
@@ -64,6 +78,7 @@ header {
 }
 h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 </style>

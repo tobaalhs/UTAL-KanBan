@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import VentanaModal from './VentanaModal.vue'
+import Icono from './Icono.vue'
 import AvatarUsuario from './AvatarUsuario.vue'
 import { mensajeDeError } from '../api/http'
 
@@ -46,8 +47,8 @@ const enviar = async () => {
     </ul>
 
     <form class="form" @submit.prevent="enviar">
-      <p v-if="error" class="alerta alerta-error" role="alert">{{ error }}</p>
-      <p v-if="exito" class="alerta alerta-exito">{{ exito }}</p>
+      <p v-if="error" class="alerta alerta-error" role="alert"><Icono nombre="alerta" :tamano="16" />{{ error }}</p>
+      <p v-if="exito" class="alerta alerta-exito"><Icono nombre="exito" :tamano="16" />{{ exito }}</p>
       <div class="campo">
         <label for="invitar-email">Invitar por correo</label>
         <input id="invitar-email" v-model.trim="email" type="email" placeholder="correo@utal.cl" required />

@@ -1,5 +1,6 @@
 <script setup>
 import Icono from './Icono.vue'
+import PrioridadIndicador from './PrioridadIndicador.vue'
 import { fechaCorta } from '../utils/fechas'
 
 defineProps({
@@ -9,13 +10,21 @@ defineEmits(['editar'])
 </script>
 
 <template>
-  <article class="tarea" tabindex="0" @click="$emit('editar')" @keydown.enter="$emit('editar')">
-    <span class="prioridad" :class="`prioridad-${tarea.prioridad.toLowerCase()}`">● {{ tarea.prioridad }}</span>
+  <article
+    class="tarea"
+    :class="{ terminada: tarea.estado === 'Terminado' }"
+    tabindex="0"
+    @click="$emit('editar')"
+    @keydown.enter="$emit('editar')"
+  >
     <h3>{{ tarea.titulo }}</h3>
     <p v-if="tarea.descripcion">{{ tarea.descripcion }}</p>
     <footer>
-      <Icono nombre="calendario" :tamano="13" />
-      {{ fechaCorta(tarea.createdAt) }}
+      <PrioridadIndicador :prioridad="tarea.prioridad" />
+      <span class="fecha">
+        <Icono nombre="calendario" :tamano="12" />
+        {{ fechaCorta(tarea.createdAt) }}
+      </span>
     </footer>
   </article>
 </template>
@@ -24,49 +33,43 @@ defineEmits(['editar'])
 .tarea {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.9rem;
+  gap: 0.4rem;
+  padding: 0.85rem 0.9rem 0.75rem;
   border: 1px solid var(--color-borde);
   border-radius: var(--radio);
   background: var(--color-superficie-2);
+  box-shadow: var(--sombra);
   cursor: grab;
-  transition: border-color 0.15s;
+  user-select: none;
+  transition: border-color var(--transicion), transform var(--transicion), background var(--transicion);
 }
-.tarea:hover,
+.tarea:hover {
+  border-color: var(--color-borde-fuerte);
+  background: #1f2235;
+}
 .tarea:focus-visible {
-  border-color: var(--color-primario);
   outline: none;
+  border-color: var(--color-primario);
 }
-.prioridad {
-  align-self: flex-start;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.prioridad-alta {
-  background: rgb(239 68 68 / 0.15);
-  color: var(--color-error);
-}
-.prioridad-media {
-  background: rgb(234 179 8 / 0.15);
-  color: var(--color-alerta);
-}
-.prioridad-baja {
-  background: rgb(34 197 94 / 0.15);
-  color: var(--color-exito);
+.tarea:active {
+  cursor: grabbing;
 }
 h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.terminada h3 {
+  color: var(--color-texto-2);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-texto-3);
 }
 p {
   margin: 0;
   color: var(--color-texto-2);
-  font-size: 0.82rem;
-  line-height: 1.4;
+  font-size: 0.8rem;
+  line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -75,9 +78,17 @@ p {
 }
 footer {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.35rem;
-  color: var(--color-texto-2);
+  margin-top: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-borde);
+}
+.fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-texto-3);
   font-size: 0.75rem;
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import VentanaModal from './VentanaModal.vue'
+import Icono from './Icono.vue'
 import { mensajeDeError } from '../api/http'
 
 // Sirve para crear (sin `tablero`) y para editar un tablero existente
@@ -34,7 +35,7 @@ const enviar = async () => {
 <template>
   <VentanaModal :titulo="tablero ? 'Editar tablero' : 'Crear tablero'" @cerrar="emit('cerrar')">
     <form class="form" @submit.prevent="enviar">
-      <p v-if="error" class="alerta alerta-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="alerta alerta-error" role="alert"><Icono nombre="alerta" :tamano="16" />{{ error }}</p>
       <div class="campo">
         <label for="tablero-nombre">Nombre</label>
         <input id="tablero-nombre" v-model="form.nombre" maxlength="60" required />
