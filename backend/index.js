@@ -1,11 +1,21 @@
 const express = require('express');
+const cors = require('cors');
+const connectDB = require('./config/db.config');
+
 const app = express();
 const port = 3000;
 
+// Conectar a la base de datos
+connectDB();
 
-app.use(cors())
-app.use(express.json())
+// Importacion de las rutas
+const usuarioRoutes = require('./routes/usuario.routes');
 
+app.use(cors());
+app.use(express.json());
+
+
+app.use('/api/usuarios', usuarioRoutes);
 
 app.get('/', (req, res) => {
   console.log("El backend esta corriendo!");
