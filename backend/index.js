@@ -5,10 +5,8 @@ const connectDB = require('./config/db.config');
 const app = express();
 const port = 3000;
 
-// Conectar a la base de datos
-connectDB();
+connectDB(); // conexion con la base de datos docker
 
-// Importacion de las rutas
 const usuarioRoutes = require('./routes/usuario.routes');
 
 app.use(cors());
