@@ -46,9 +46,27 @@ export const useTablerosStore = defineStore('tableros', () => {
   // Mantiene al dia el contador de tareas de la tarjeta del tablero
   const ajustarConteo = (id, delta) => {
     for (const t of [actual.value, lista.value.find((t) => t._id === id)]) {
-      if (t?._id === id) t.cantidadTareas += delta
+      if (t?._id === id) t.cantidadTareas = (t.cantidadTareas || 0) + delta
     }
   }
 
-  return { lista, actual, cargando, cargar, abrir, crear, actualizar, eliminar, invitar, ajustarConteo }
+  const ajustarTerminadas = (id, delta) => {
+    for (const t of [actual.value, lista.value.find((t) => t._id === id)]) {
+      if (t?._id === id) t.cantidadTerminadas = (t.cantidadTerminadas || 0) + delta
+    }
+  }
+
+  return {
+    lista,
+    actual,
+    cargando,
+    cargar,
+    abrir,
+    crear,
+    actualizar,
+    eliminar,
+    invitar,
+    ajustarConteo,
+    ajustarTerminadas,
+  }
 })

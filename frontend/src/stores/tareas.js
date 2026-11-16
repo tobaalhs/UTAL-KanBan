@@ -27,9 +27,13 @@ export const useTareasStore = defineStore('tareas', () => {
   }
 
   const eliminar = async (id) => {
+    const tarea = buscar(id)
     await api.eliminar(id)
     lista.value = lista.value.filter((t) => t._id !== id)
     useTablerosStore().ajustarConteo(tableroId.value, -1)
+    if (tarea?.estado === 'Terminado') {
+      useTablerosStore().ajustarTerminadas(tableroId.value, -1)
+    }
   }
 
   // RF17-RF19: actualizacion optimista. La tarjeta cambia de columna al instante
@@ -40,7 +44,13 @@ export const useTareasStore = defineStore('tareas', () => {
     const anterior = tarea.estado
     tarea.estado = nuevoEstado
     try {
-      await api.actualizar(id, { estado: nuevoEstado })
+      await api.actualizarEstado(id, nuevoEstado)
+      if (anterior === 'Terminado') {
+        useTablerosStore().ajustarTerminadas(tableroId.value, -1)
+      }
+      if (nuevoEstado === 'Terminado') {
+        useTablerosStore().ajustarTerminadas(tableroId.value, 1)
+      }
     } catch (error) {
       tarea.estado = anterior
       throw error
