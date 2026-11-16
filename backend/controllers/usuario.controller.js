@@ -1,25 +1,28 @@
 const usuarioService = require('../services/usuario.service');
+const { responderError } = require('../utils/errorHttp');
 
 const registro = async (req, res) => {
     try {
         const { nombre, email, password } = req.body;
 
-        if (!nombre || !email || !password) {
-            return res.status(400).json({ mensaje: 'Todos los campos son obligatorios' });
-        }
-
         const usuarioCreado = await usuarioService.registrarUsuario(nombre, email, password);
+        const id = usuarioCreado._id.toString();
 
-        res.status(201).json({
+        return res.status(201).json({
+            message: 'Usuario registrado exitosamente',
+            user: {
+                id,
+                email: usuarioCreado.email
+            },
             mensaje: 'Usuario registrado exitosamente',
             usuario: {
-                _id: usuarioCreado._id,
+                _id: id,
                 nombre: usuarioCreado.nombre,
                 email: usuarioCreado.email
             }
         });
     } catch (error) {
-        res.status(400).json({ mensaje: error.message });
+        return responderError(res, error);
     }
 };
 
@@ -27,23 +30,25 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ mensaje: 'Email y password son obligatorios' });
-        }
-
         const { usuario, token } = await usuarioService.loginUsuario(email, password);
+        const id = usuario._id.toString();
 
-        res.status(200).json({
+        return res.status(200).json({
             mensaje: 'Login exitoso',
             token,
+            user: {
+                id,
+                nombre: usuario.nombre,
+                email: usuario.email
+            },
             usuario: {
-                _id: usuario._id,
+                _id: id,
                 nombre: usuario.nombre,
                 email: usuario.email
             }
         });
     } catch (error) {
-        res.status(401).json({ mensaje: error.message });
+        return responderError(res, error);
     }
 };
 
