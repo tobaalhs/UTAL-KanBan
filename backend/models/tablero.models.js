@@ -33,7 +33,8 @@ tableroSchema.pre('validate', function () {
     const miembrosUnicos = new Map();
     miembrosUnicos.set(this.creadorId.toString(), this.creadorId);
 
-    for (const miembroId of this.miembros || []) {
+    for (const miembro of this.miembros || []) {
+        const miembroId = miembro._id || miembro;
         miembrosUnicos.set(miembroId.toString(), miembroId);
     }
 
