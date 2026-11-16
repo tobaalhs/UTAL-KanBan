@@ -8,8 +8,10 @@ const router = Router();
 router.post(
     '/login',
     body('email')
-        .isEmail().withMessage('El correo electrónico no es válido')
-        .normalizeEmail(),
+        .isString().withMessage('El correo electrónico debe ser texto')
+        .bail()
+        .trim()
+        .isEmail().withMessage('El correo electrónico no es válido'),
     body('password')
         .isString().withMessage('La contraseña debe ser texto')
         .bail()
@@ -26,8 +28,10 @@ router.post(
         .trim()
         .notEmpty().withMessage('El nombre no puede estar vacío'),
     body('email')
-        .isEmail().withMessage('El correo electrónico no es válido')
-        .normalizeEmail(),
+        .isString().withMessage('El correo electrónico debe ser texto')
+        .bail()
+        .trim()
+        .isEmail().withMessage('El correo electrónico no es válido'),
     body('password')
         .isString().withMessage('La contraseña debe ser texto')
         .bail()
