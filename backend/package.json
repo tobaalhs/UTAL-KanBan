@@ -8,7 +8,11 @@
     "dev": "node --watch index.js",
     "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
-    "test:coverage": "cross-env NODE_ENV=test jest --coverage"
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format:check": "prettier --check \"**/*.js\"",
+    "format": "prettier --write \"**/*.js\""
   },
   "keywords": [],
   "author": "",
@@ -24,7 +28,9 @@
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
+    "eslint": "^10.15.0",
     "jest": "^30.5.2",
+    "prettier": "^3.10.1",
     "supertest": "^7.3.2"
   }
 }
