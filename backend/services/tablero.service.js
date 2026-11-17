@@ -2,6 +2,7 @@ const Tablero = require('../models/tablero.models');
 const Tarea = require('../models/tarea.models');
 const Usuario = require('../models/usuario.models');
 const { crearErrorHttp } = require('../utils/errorHttp');
+const serializarAsignado = require('../utils/serializarAsignado');
 
 const serializarMiembro = (miembro, creadorId) => {
     const id = miembro._id.toString();
@@ -28,6 +29,7 @@ const serializarTarea = (tarea) => {
         descripcion: tarea.descripcion,
         estado: tarea.estado,
         prioridad: tarea.prioridad,
+        asignado: serializarAsignado(tarea.asignadoId),
         createdAt: tarea.createdAt,
         updatedAt: tarea.updatedAt
     };
@@ -149,7 +151,9 @@ const listarTableros = async (usuarioId) => {
 
 const obtenerTablero = async (id, usuarioId) => {
     const tablero = await obtenerTableroMiembro(id, usuarioId);
-    const tareas = await Tarea.find({ tableroId: tablero._id }).sort({ createdAt: 1 });
+    const tareas = await Tarea.find({ tableroId: tablero._id })
+        .populate('asignadoId', 'nombre email')
+        .sort({ createdAt: 1 });
     return serializarTablero(tablero, { tareas });
 };
 

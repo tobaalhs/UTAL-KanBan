@@ -191,10 +191,16 @@ const eliminarTablero = async () => {
       </section>
     </div>
 
-    <TareaModal v-if="modal === 'nueva-tarea'" :guardar="tareas.crear" @cerrar="modal = null" />
+    <TareaModal
+      v-if="modal === 'nueva-tarea'"
+      :miembros="tablero.miembros"
+      :guardar="tareas.crear"
+      @cerrar="modal = null"
+    />
     <TareaModal
       v-else-if="modal?.tarea"
       :tarea="modal.tarea"
+      :miembros="tablero.miembros"
       :puede-eliminar="esCreador"
       :guardar="(datos) => tareas.editar(modal.tarea._id, datos)"
       :eliminar="() => tareas.eliminar(modal.tarea._id)"

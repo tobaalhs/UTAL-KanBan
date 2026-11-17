@@ -1,15 +1,17 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import VentanaModal from './VentanaModal.vue'
 import Icono from './Icono.vue'
 import EstadoIcono from './EstadoIcono.vue'
 import PrioridadIndicador from './PrioridadIndicador.vue'
 import { mensajeDeError } from '../api/http'
 import { PRIORIDADES } from '../services/tareas'
+import { useAuthStore } from '../stores/auth'
 
 // Sirve para crear (sin `tarea`) y para editar una tarea existente
 const props = defineProps({
   tarea: { type: Object, default: null },
+  miembros: { type: Array, default: () => [] },
   puedeEliminar: { type: Boolean, default: false },
   guardar: { type: Function, required: true },
   eliminar: { type: Function, default: null },
@@ -20,7 +22,11 @@ const form = reactive({
   titulo: props.tarea?.titulo ?? '',
   descripcion: props.tarea?.descripcion ?? '',
   prioridad: props.tarea?.prioridad ?? 'Media',
+  asignadoId: props.tarea?.asignado?._id ?? '',
 })
+const auth = useAuthStore()
+const esMiembro = (id) => props.miembros.some((m) => m._id === id)
+const puedeAsignarmela = computed(() => esMiembro(auth.usuario?._id) && form.asignadoId !== auth.usuario._id)
 const error = ref('')
 const ocupado = ref(false)
 
@@ -39,7 +45,13 @@ const ejecutar = async (accion, porDefecto) => {
 
 const enviar = () =>
   ejecutar(
-    () => props.guardar({ titulo: form.titulo.trim(), descripcion: form.descripcion.trim(), prioridad: form.prioridad }),
+    () =>
+      props.guardar({
+        titulo: form.titulo.trim(),
+        descripcion: form.descripcion.trim(),
+        prioridad: form.prioridad,
+        asignadoId: form.asignadoId || null, // null = sin responsable
+      }),
     'No se pudo guardar la tarea',
   )
 
@@ -74,6 +86,18 @@ const borrar = () => {
           </label>
         </div>
       </fieldset>
+      <div class="campo">
+        <div class="etiqueta-fila">
+          <label for="tarea-asignado">Responsable</label>
+          <button v-if="puedeAsignarmela" type="button" class="enlace" @click="form.asignadoId = auth.usuario._id">
+            Asignármela a mí
+          </button>
+        </div>
+        <select id="tarea-asignado" v-model="form.asignadoId">
+          <option value="">Sin asignar</option>
+          <option v-for="m in miembros" :key="m._id" :value="m._id">{{ m.nombre }}</option>
+        </select>
+      </div>
       <div class="form-acciones">
         <button v-if="tarea && puedeEliminar" type="button" class="btn btn-peligro izquierda" :disabled="ocupado" @click="borrar">
           <Icono nombre="eliminar" :tamano="16" /> Eliminar
@@ -90,6 +114,23 @@ const borrar = () => {
 <style scoped>
 .izquierda {
   margin-right: auto;
+}
+.etiqueta-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.enlace {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primario-claro);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.enlace:hover {
+  color: var(--color-texto);
 }
 .estado-actual {
   display: inline-flex;
