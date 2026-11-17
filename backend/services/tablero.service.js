@@ -2,6 +2,7 @@ const Tablero = require('../models/tablero.models');
 const Tarea = require('../models/tarea.models');
 const Usuario = require('../models/usuario.models');
 const { crearErrorHttp } = require('../utils/errorHttp');
+const correoService = require('./correo.service');
 
 const serializarMiembro = (miembro, creadorId) => {
     const id = miembro._id.toString();
@@ -197,6 +198,19 @@ const invitarMiembro = async (id, email, usuarioId) => {
 
     const tableroActualizado = await Tablero.findById(tablero._id)
         .populate('miembros', 'nombre email');
+
+    // Aviso por correo (HU-10). No se espera: no debe retrasar la respuesta (RNF08)
+    // y, si falla, la invitacion ya quedo guardada. enviarInvitacion nunca lanza.
+    const invitador = tableroActualizado.miembros.find(
+        (miembro) => miembro._id.toString() === usuarioId
+    );
+    correoService.enviarInvitacion({
+        email: usuario.email,
+        nombreInvitado: usuario.nombre,
+        nombreInvitador: invitador?.nombre,
+        nombreTablero: tableroActualizado.nombre,
+        tableroId: tableroActualizado._id.toString()
+    });
 
     return {
         message: 'Usuario invitado añadido al tablero',
