@@ -20,6 +20,8 @@ const iconos = {
   cerrar: '<path d="M18 6 6 18M6 6l12 12"/>',
   alerta: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
   exito: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  tareas: '<path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+  usuario: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   separador: '<path d="m9 18 6-6-6-6"/>',
   reloj: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   invitar: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
