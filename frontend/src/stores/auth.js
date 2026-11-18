@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import http from '../api/http'
 
 const CLAVE = 'utal-kanban-sesion'
+export const CLAVE_SESION = CLAVE
 
 // "Recordar sesion" guarda en localStorage; si no, solo dura mientras la pestaña esté abierta
 const leerSesion = () => {
