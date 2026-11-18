@@ -97,21 +97,6 @@ const cerrarSesion = () => {
           <Icono nombre="salir" :tamano="16" /> Cerrar sesión
         </button>
       </section>
-
-      <section class="tarjeta">
-        <h2>Acerca de</h2>
-        <dl class="datos">
-          <div>
-            <dt>Aplicación</dt>
-            <dd>Utal KanBan</dd>
-          </div>
-          <div>
-            <dt>Tecnologías</dt>
-            <dd>MongoDB, Express, Vue y Node.js (MEVN)</dd>
-          </div>
-        </dl>
-        <p class="nota">Proyecto de Tecnologías Web, Universidad de Talca.</p>
-      </section>
     </div>
   </div>
 </template>
