@@ -172,7 +172,7 @@ const borrar = () => {
           <option v-for="m in miembros" :key="m._id" :value="m._id">{{ m.nombre }}</option>
         </select>
       </div>
-      <div class="campo">
+      <div v-if="!estaFinalizada || form.etiquetas.length" class="campo">
         <label for="tarea-etiqueta">Etiquetas</label>
         <div v-if="!estaFinalizada" class="entrada-inline">
           <input
@@ -213,7 +213,7 @@ const borrar = () => {
         </div>
       </div>
 
-      <div class="campo">
+      <div v-if="!estaFinalizada || form.subtareas.length" class="campo">
         <div class="etiqueta-fila">
           <label for="tarea-subtarea">Subtareas</label>
           <span v-if="form.subtareas.length" class="contador-sub">
