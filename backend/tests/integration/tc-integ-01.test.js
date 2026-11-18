@@ -220,12 +220,57 @@ describe('TC-INTEG-01: Integridad de datos y autorización de acceso a tableros 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('mensaje');
     });
-  });
 
+    it('14. Crear una tarea asignada a un miembro válido persiste asignadoId en BD y lo retorna poblado', async () => {
+      // Usuario A es miembro/creador de Tablero A
+      const res = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Asignada a Miembro',
+          asignadoId: datos.usuarioA._id.toString()
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty('asignado');
+      expect(res.body.asignado.id).toBe(datos.usuarioA._id.toString());
+      expect(res.body.asignado.email).toBe(DATOS_SEMILLA.usuarioA.email.toLowerCase());
+
+      const enDb = await Tarea.findById(res.body._id || res.body.id);
+      expect(enDb.asignadoId.toString()).toBe(datos.usuarioA._id.toString());
+    });
+
+    it('15. Asignar una tarea a un usuario que NO es miembro del tablero responde HTTP 400', async () => {
+      // Usuario B no es miembro del tablero A
+      const res = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Asignación Inválida',
+          asignadoId: datos.usuarioB._id.toString()
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.mensaje).toBe('El usuario asignado no es miembro del tablero');
+    });
+
+    it('16. Enviar asignadoId con formato inválido ("123xyz") responde HTTP 400', async () => {
+      const res = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea con ID Inválido',
+          asignadoId: '123xyz'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('mensaje');
+    });
+  });
 
   // Bloque 4: Datos sensibles (RNF01) y Formato de Errores
   describe('Bloque 4: Datos sensibles (RNF01) y formato estandarizado', () => {
-    it('14. La contraseña del usuario en MongoDB contiene un hash bcrypt ($2b$) y nunca texto plano', async () => {
+    it('17. La contraseña del usuario en MongoDB contiene un hash bcrypt ($2b$) y nunca texto plano', async () => {
       const usuarioEnDb = await Usuario.findById(datos.usuarioA._id);
 
       expect(usuarioEnDb).not.toBeNull();
@@ -233,7 +278,7 @@ describe('TC-INTEG-01: Integridad de datos y autorización de acceso a tableros 
       expect(usuarioEnDb.password).toMatch(/^\$2[aby]\$\d{2}\$/);
     });
 
-    it('15. Todas las respuestas de error utilizan el formato { "mensaje": "..." }', async () => {
+    it('18. Todas las respuestas de error utilizan el formato { "mensaje": "..." }', async () => {
       const res = await request(app)
         .get('/api/v1/boards/000000000000000000000000')
         .set('Authorization', `Bearer ${tokenA}`);

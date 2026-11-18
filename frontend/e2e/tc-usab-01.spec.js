@@ -68,4 +68,34 @@ test.describe('TC-USAB-01: Responsividad Multiplataforma y Jerarquía Visual de 
     await expect(page.locator('button[type="submit"]:has-text("Crear tarea")')).toBeVisible();
     await page.click('button:has-text("Cancelar")');
   });
+
+  test('Bloque 3: Asignación de Tareas y Navegación a Dashboard, Miembros y Ajustes', async ({ page }) => {
+    // 1. Crear una tarea y asignársela al usuario actual
+    await page.click('button:has-text("Nueva tarea")');
+    await page.fill('#tarea-titulo', 'Tarea con Responsable Asignado');
+    await page.click('button:has-text("Asignármela a mí")');
+    await page.click('button[type="submit"]:has-text("Crear tarea")');
+
+    const tareaAsignada = page.locator('.tarea', { hasText: 'Tarea con Responsable Asignado' });
+    await expect(tareaAsignada).toBeVisible();
+    await expect(tareaAsignada.locator('.avatar')).toBeVisible();
+
+    // 2. Navegar a Dashboard
+    await page.click('nav a:has-text("Dashboard")');
+    await page.waitForURL('**/dashboard');
+    await expect(page.locator('h1')).toHaveText('Dashboard');
+    await expect(page.locator('.encabezado')).toBeVisible();
+
+    // 3. Navegar a Miembros
+    await page.click('nav a:has-text("Miembros")');
+    await page.waitForURL('**/miembros');
+    await expect(page.locator('h1')).toContainText('Miembros');
+    await expect(page.locator('input[placeholder*="Buscar"]')).toBeVisible();
+
+    // 4. Navegar a Ajustes
+    await page.click('nav a:has-text("Ajustes")');
+    await page.waitForURL('**/ajustes');
+    await expect(page.locator('h1')).toHaveText('Ajustes');
+    await expect(page.locator('h2:has-text("Perfil")')).toBeVisible();
+  });
 });
