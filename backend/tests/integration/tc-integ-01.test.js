@@ -1,0 +1,247 @@
+const request = require('supertest');
+const jwt = require('jsonwebtoken');
+const app = require('../../index');
+const Usuario = require('../../models/usuario.models');
+const Tablero = require('../../models/tablero.models');
+const Tarea = require('../../models/tarea.models');
+const { conectarTestDb, desconectarTestDb } = require('../helpers/testDb');
+const { poblarDatosPrueba, DATOS_SEMILLA } = require('../fixtures/seedData');
+
+describe('TC-INTEG-01: Integridad de datos y autorización de acceso a tableros y tareas', () => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_jwt';
+  let datos;
+  let tokenA;
+  let tokenB;
+
+  beforeAll(async () => {
+    await conectarTestDb();
+  });
+
+  afterAll(async () => {
+    await desconectarTestDb();
+  });
+
+  beforeEach(async () => {
+    datos = await poblarDatosPrueba();
+
+    // Obtener JWT de Usuario A mediante login
+    const loginA = await request(app)
+      .post('/api/usuarios/login')
+      .send({
+        email: DATOS_SEMILLA.usuarioA.email,
+        password: DATOS_SEMILLA.usuarioA.password
+      });
+    tokenA = loginA.body.token;
+
+    // Obtener JWT de Usuario B mediante login
+    const loginB = await request(app)
+      .post('/api/usuarios/login')
+      .send({
+        email: DATOS_SEMILLA.usuarioB.email,
+        password: DATOS_SEMILLA.usuarioB.password
+      });
+    tokenB = loginB.body.token;
+  });
+
+  // Bloque 1: Autenticación y sesión (HU-03)
+  describe('Bloque 1: Autenticación y sesión (HU-03)', () => {
+    it('1. Debe rechazar con HTTP 401 una petición sin el header Authorization', async () => {
+      const res = await request(app).get('/api/v1/boards');
+
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('mensaje');
+      expect(res.body.mensaje).toBe('Token de autenticación requerido');
+    });
+
+    it('2. Debe rechazar con HTTP 401 una petición con un token con la firma alterada', async () => {
+      // Modificamos el último carácter de la firma
+      const ultimoChar = tokenA.slice(-1);
+      const charAlterado = ultimoChar === 'a' ? 'b' : 'a';
+      const tokenAlterado = tokenA.slice(0, -1) + charAlterado;
+
+      const res = await request(app)
+        .get('/api/v1/boards')
+        .set('Authorization', `Bearer ${tokenAlterado}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.mensaje).toBe('Token de autenticación inválido o expirado');
+    });
+
+    it('3. Debe rechazar con HTTP 401 una petición con un token expirado', async () => {
+      const tokenExpirado = jwt.sign(
+        { id: datos.usuarioA._id.toString(), email: datos.usuarioA.email },
+        JWT_SECRET,
+        { expiresIn: '-2s' }
+      );
+
+      const res = await request(app)
+        .get('/api/v1/boards')
+        .set('Authorization', `Bearer ${tokenExpirado}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.mensaje).toBe('Token de autenticación inválido o expirado');
+    });
+  });
+
+
+  // Bloque 2: Aislamiento entre usuarios (HU-17, RNF09)
+  describe('Bloque 2: Aislamiento entre usuarios (HU-17 / RNF09)', () => {
+    it('4. Usuario B recibe HTTP 403 al intentar ver el tablero del Usuario A usando su ID', async () => {
+      const res = await request(app)
+        .get(`/api/v1/boards/${datos.tableroA._id}`)
+        .set('Authorization', `Bearer ${tokenB}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('mensaje');
+      expect(res.body.mensaje).toBe('No tienes permiso para acceder a este tablero');
+    });
+
+    it('5. Usuario B recibe HTTP 403 al intentar cambiar el estado de la tarea del Usuario A y no se modifica en BD', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/tasks/${datos.tareaA._id}/status`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ estado: 'En curso' });
+
+      expect(res.status).toBe(403);
+      expect(res.body).toHaveProperty('mensaje');
+
+      // Verificar que en la base de datos la tarea permanece en Pendiente
+      const tareaEnDb = await Tarea.findById(datos.tareaA._id);
+      expect(tareaEnDb.estado).toBe('Pendiente');
+    });
+
+    it('6. Usuario B recibe HTTP 403 al intentar eliminar el tablero del Usuario A y este permanece en BD', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/boards/${datos.tableroA._id}`)
+        .set('Authorization', `Bearer ${tokenB}`);
+
+      expect(res.status).toBe(403);
+
+      // Verificar que el tablero sigue existiendo en MongoDB
+      const tableroEnDb = await Tablero.findById(datos.tableroA._id);
+      expect(tableroEnDb).not.toBeNull();
+    });
+
+    it('7. El listado de tableros del Usuario B no incluye ningún tablero del Usuario A', async () => {
+      const res = await request(app)
+        .get('/api/v1/boards')
+        .set('Authorization', `Bearer ${tokenB}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+
+      const incluyeTableroAjeno = res.body.some(
+        (t) => t._id === datos.tableroA._id.toString() || t.id === datos.tableroA._id.toString()
+      );
+      expect(incluyeTableroAjeno).toBe(false);
+    });
+
+    it('8. Consultar un tablero inexistente con ID válido responde HTTP 404', async () => {
+      const idInexistente = '000000000000000000000000';
+      const res = await request(app)
+        .get(`/api/v1/boards/${idInexistente}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.mensaje).toBe('Tablero no encontrado');
+    });
+  });
+
+
+  // Bloque 3: Restricciones del esquema (HU-11, HU-14, RF06, RNF03, RNF04)
+  describe('Bloque 3: Restricciones del esquema (HU-11, HU-14)', () => {
+    it('9. Enviar un estado inválido ("Bloqueado") responde HTTP 400 y la tarea conserva su valor', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/tasks/${datos.tareaA._id}/status`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ estado: 'Bloqueado' });
+
+      expect(res.status).toBe(400);
+
+      const tareaEnDb = await Tarea.findById(datos.tareaA._id);
+      expect(tareaEnDb.estado).toBe('Pendiente');
+    });
+
+    it('10. Enviar una prioridad inválida ("Urgente") responde HTTP 400 y conserva su prioridad original', async () => {
+      const res = await request(app)
+        .put(`/api/v1/tasks/${datos.tareaA._id}`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: datos.tareaA.titulo,
+          prioridad: 'Urgente'
+        });
+
+      expect(res.status).toBe(400);
+
+      const tareaEnDb = await Tarea.findById(datos.tareaA._id);
+      expect(tareaEnDb.prioridad).toBe('Media');
+    });
+
+    it('11. Una tarea nueva enviada con estado "Terminado" se guarda igualmente en estado "Pendiente"', async () => {
+      const res = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Nueva Forzada',
+          estado: 'Terminado',
+          prioridad: 'Alta'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.estado).toBe('Pendiente');
+
+      // Verificar directamente en MongoDB
+      const tareaCreada = await Tarea.findById(res.body._id || res.body.id);
+      expect(tareaCreada).not.toBeNull();
+      expect(tareaCreada.estado).toBe('Pendiente');
+    });
+
+    it('12. Crear una tarea con el título vacío responde HTTP 400 y no crea ningún documento', async () => {
+      const totalTareasAntes = await Tarea.countDocuments();
+
+      const res = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: ''
+        });
+
+      expect(res.status).toBe(400);
+
+      const totalTareasDespues = await Tarea.countDocuments();
+      expect(totalTareasDespues).toBe(totalTareasAntes);
+    });
+
+    it('13. Enviar un ID con formato inválido ("abc") responde HTTP 400 sin caerse el servidor', async () => {
+      const res = await request(app)
+        .get('/api/v1/boards/abc')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('mensaje');
+    });
+  });
+
+
+  // Bloque 4: Datos sensibles (RNF01) y Formato de Errores
+  describe('Bloque 4: Datos sensibles (RNF01) y formato estandarizado', () => {
+    it('14. La contraseña del usuario en MongoDB contiene un hash bcrypt ($2b$) y nunca texto plano', async () => {
+      const usuarioEnDb = await Usuario.findById(datos.usuarioA._id);
+
+      expect(usuarioEnDb).not.toBeNull();
+      expect(usuarioEnDb.password).not.toBe(DATOS_SEMILLA.usuarioA.password);
+      expect(usuarioEnDb.password).toMatch(/^\$2[aby]\$\d{2}\$/);
+    });
+
+    it('15. Todas las respuestas de error utilizan el formato { "mensaje": "..." }', async () => {
+      const res = await request(app)
+        .get('/api/v1/boards/000000000000000000000000')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('mensaje');
+      expect(typeof res.body.mensaje).toBe('string');
+      expect(res.body.mensaje.length).toBeGreaterThan(0);
+    });
+  });
+});
