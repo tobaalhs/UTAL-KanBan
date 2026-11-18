@@ -1,0 +1,68 @@
+name: Develop CI/CD - Integration & E2E Suites
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  integration-and-e2e:
+    name: Full Test Suite (TC-INTEG-01 + Playwright E2E)
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright Browsers & OS Dependencies
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Backend Integration Suite (TC-INTEG-01)
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://127.0.0.1:27017/kanban_test
+          JWT_SECRET: clave_secreta_jwt_test
+        run: npm run test:integration
+
+      - name: Run Playwright E2E Suite (TC-AUTO-01, TC-FUNC-01, TC-USAB-01)
+        working-directory: frontend
+        env:
+          CI: true
+          MONGODB_URI: mongodb://127.0.0.1:27017/kanban
+        run: npm run test:e2e
+
+      - name: Upload Playwright Artifacts on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/test-results/
+          retention-days: 7
+

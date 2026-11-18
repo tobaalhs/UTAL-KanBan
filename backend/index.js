@@ -5,10 +5,12 @@ const connectDB = require('./config/db.config');
 const verificarToken = require('./middlewares/verificarToken');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-// Conectar a la base de datos
-connectDB();
+// Conectar a la base de datos si se ejecuta directamente
+if (require.main === module) {
+  connectDB();
+}
 
 // Importacion de las rutas
 const usuarioRoutes = require('./routes/usuario.routes');
@@ -47,6 +49,10 @@ app.get('/', (req, res) => {
   res.send("El backend esta corriendo");
 });
 
-app.listen(port, () => {
-  process.stdout.write(`Servidor corriendo en el puerto ${port}\n`);
-})
+if (require.main === module) {
+  app.listen(port, () => {
+    process.stdout.write(`Servidor corriendo en el puerto ${port}\n`);
+  });
+}
+
+module.exports = app;
