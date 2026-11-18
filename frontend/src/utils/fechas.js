@@ -14,3 +14,11 @@ export const fechaRelativa = (iso) => {
 // "10 sep"
 export const fechaCorta = (iso) =>
   new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace('.', '')
+
+// "Buenos dias", "Buenas tardes" o "Buenas noches" segun la hora
+export const saludo = () => {
+  const hora = new Date().getHours()
+  if (hora < 12) return 'Buenos días'
+  if (hora < 20) return 'Buenas tardes'
+  return 'Buenas noches'
+}

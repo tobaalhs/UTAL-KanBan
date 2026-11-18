@@ -9,12 +9,11 @@ import LogoMarca from './LogoMarca.vue'
 const auth = useAuthStore()
 const router = useRouter()
 
-// Dashboard, Miembros y Ajustes aparecen en el mockup pero aun no estan en el alcance
 const navegacion = [
-  { nombre: 'Dashboard', icono: 'dashboard' },
+  { nombre: 'Dashboard', icono: 'dashboard', ruta: { name: 'dashboard' } },
   { nombre: 'Mis tableros', icono: 'tableros', ruta: { name: 'tableros' } },
-  { nombre: 'Miembros', icono: 'miembros' },
-  { nombre: 'Ajustes', icono: 'ajustes' },
+  { nombre: 'Miembros', icono: 'miembros', ruta: { name: 'miembros' } },
+  { nombre: 'Ajustes', icono: 'ajustes', ruta: { name: 'ajustes' } },
 ]
 
 const cerrarSesion = () => {
@@ -32,17 +31,10 @@ const cerrarSesion = () => {
 
       <nav>
         <span class="seccion">Espacio de trabajo</span>
-        <template v-for="item in navegacion" :key="item.nombre">
-          <RouterLink v-if="item.ruta" :to="item.ruta" class="nav-item">
-            <Icono :nombre="item.icono" :tamano="17" />
-            <span>{{ item.nombre }}</span>
-          </RouterLink>
-          <span v-else class="nav-item deshabilitado" title="Próximamente">
-            <Icono :nombre="item.icono" :tamano="17" />
-            <span>{{ item.nombre }}</span>
-            <small class="pronto">Pronto</small>
-          </span>
-        </template>
+        <RouterLink v-for="item in navegacion" :key="item.nombre" :to="item.ruta" class="nav-item">
+          <Icono :nombre="item.icono" :tamano="17" />
+          <span>{{ item.nombre }}</span>
+        </RouterLink>
       </nav>
 
       <div class="usuario">
@@ -136,18 +128,6 @@ a.nav-item:hover {
 .nav-item.router-link-active svg {
   color: var(--color-primario-claro);
 }
-.deshabilitado {
-  color: var(--color-texto-3);
-  cursor: default;
-}
-.pronto {
-  margin-left: auto;
-  padding: 0 0.4rem;
-  border: 1px solid var(--color-borde-fuerte);
-  border-radius: 5px;
-  font-size: 0.65rem;
-  line-height: 16px;
-}
 .usuario {
   display: flex;
   align-items: center;
@@ -203,7 +183,6 @@ a.nav-item:hover {
   .logo :deep(.texto),
   .seccion,
   .nav-item span,
-  .deshabilitado,
   .usuario-datos {
     display: none;
   }

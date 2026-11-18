@@ -4,6 +4,8 @@ import AppLayout from '../components/AppLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(),
+  // Cada pagina abre arriba (o donde estaba al volver atras), no donde quedo la anterior
+  scrollBehavior: (to, from, guardada) => guardada || { top: 0 },
   routes: [
     {
       path: '/login',
@@ -24,8 +26,11 @@ const router = createRouter({
       meta: { requiereAuth: true },
       children: [
         { path: '', redirect: { name: 'tableros' } },
+        { path: 'dashboard', name: 'dashboard', component: () => import('../views/DashboardView.vue') },
         { path: 'tableros', name: 'tableros', component: () => import('../views/TablerosView.vue') },
         { path: 'tableros/:id', name: 'tablero', component: () => import('../views/TableroView.vue'), props: true },
+        { path: 'miembros', name: 'miembros', component: () => import('../views/MiembrosView.vue') },
+        { path: 'ajustes', name: 'ajustes', component: () => import('../views/AjustesView.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

@@ -1,4 +1,5 @@
 <script setup>
+import AvatarUsuario from './AvatarUsuario.vue'
 import Icono from './Icono.vue'
 import PrioridadIndicador from './PrioridadIndicador.vue'
 import { fechaCorta } from '../utils/fechas'
@@ -21,10 +22,13 @@ defineEmits(['editar'])
     <p v-if="tarea.descripcion">{{ tarea.descripcion }}</p>
     <footer>
       <PrioridadIndicador :prioridad="tarea.prioridad" />
-      <span class="fecha">
-        <Icono nombre="calendario" :tamano="12" />
-        {{ fechaCorta(tarea.createdAt) }}
-      </span>
+      <div class="derecha">
+        <span class="fecha">
+          <Icono nombre="calendario" :tamano="12" />
+          {{ fechaCorta(tarea.createdAt) }}
+        </span>
+        <AvatarUsuario v-if="tarea.asignado" :usuario="tarea.asignado" :tamano="24" />
+      </div>
     </footer>
   </article>
 </template>
@@ -83,6 +87,11 @@ footer {
   margin-top: 0.35rem;
   padding-top: 0.6rem;
   border-top: 1px solid var(--color-borde);
+}
+.derecha {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 .fecha {
   display: inline-flex;
