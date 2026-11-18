@@ -1,6 +1,9 @@
 const Tablero = require('../models/tablero.models');
 const Tarea = require('../models/tarea.models');
 const { crearErrorHttp } = require('../utils/errorHttp');
+const serializarAsignado = require('../utils/serializarAsignado');
+
+const CAMPOS_ASIGNADO = 'nombre email';
 
 const serializarTarea = (tarea) => {
     const id = tarea._id.toString();
@@ -15,6 +18,7 @@ const serializarTarea = (tarea) => {
         descripcion: tarea.descripcion,
         prioridad: tarea.prioridad,
         estado: tarea.estado,
+        asignado: serializarAsignado(tarea.asignadoId),
         createdAt: tarea.createdAt,
         updatedAt: tarea.updatedAt
     };
@@ -40,6 +44,14 @@ const obtenerTareaYTableroMiembro = async (id, usuarioId) => {
     return { tarea, tablero };
 };
 
+// El responsable de una tarea debe ser miembro del tablero
+const validarAsignado = (tablero, asignadoId) => {
+    const esMiembro = tablero.miembros.some((miembroId) => miembroId.toString() === asignadoId);
+    if (!esMiembro) {
+        throw crearErrorHttp(400, 'El usuario asignado no es miembro del tablero');
+    }
+};
+
 const crearTarea = async (boardId, datos, usuarioId) => {
     const tablero = await Tablero.findById(boardId);
 
@@ -52,19 +64,26 @@ const crearTarea = async (boardId, datos, usuarioId) => {
         throw crearErrorHttp(403, 'No tienes permiso para acceder a este tablero');
     }
 
+    const asignadoId = datos.asignadoId || null;
+    if (asignadoId) {
+        validarAsignado(tablero, asignadoId);
+    }
+
     const tarea = await Tarea.create({
         tableroId: tablero._id,
         titulo: datos.titulo,
         descripcion: datos.descripcion,
         prioridad: datos.prioridad,
-        estado: 'Pendiente'
+        estado: 'Pendiente',
+        asignadoId
     });
 
+    await tarea.populate('asignadoId', CAMPOS_ASIGNADO);
     return serializarTarea(tarea);
 };
 
 const actualizarTarea = async (id, datos, usuarioId) => {
-    const { tarea } = await obtenerTareaYTableroMiembro(id, usuarioId);
+    const { tarea, tablero } = await obtenerTareaYTableroMiembro(id, usuarioId);
 
     tarea.titulo = datos.titulo;
     if (datos.descripcion !== undefined) {
@@ -73,8 +92,16 @@ const actualizarTarea = async (id, datos, usuarioId) => {
     if (datos.prioridad !== undefined) {
         tarea.prioridad = datos.prioridad;
     }
+    // undefined = no tocar el responsable, null = dejar la tarea sin asignar
+    if (datos.asignadoId !== undefined) {
+        if (datos.asignadoId !== null) {
+            validarAsignado(tablero, datos.asignadoId);
+        }
+        tarea.asignadoId = datos.asignadoId;
+    }
 
     await tarea.save();
+    await tarea.populate('asignadoId', CAMPOS_ASIGNADO);
     return serializarTarea(tarea);
 };
 
