@@ -25,6 +25,10 @@ const validarDatosTarea = [
         .optional()
         .isIn(['Alta', 'Media', 'Baja'])
         .withMessage('La prioridad no es válida'),
+    body('asignadoId')
+        .optional({ values: 'null' })
+        .isMongoId()
+        .withMessage('El usuario asignado no es válido'),
     validarCampos
 ];
 

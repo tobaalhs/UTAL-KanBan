@@ -25,6 +25,11 @@ const tareaSchema = new mongoose.Schema({
         type: String,
         enum: ['Alta', 'Media', 'Baja'],
         default: 'Media'
+    },
+    asignadoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Usuario',
+        default: null
     }
 }, {
     timestamps: true,
