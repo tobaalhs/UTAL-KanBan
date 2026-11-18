@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "correo:probar": "node scripts/probar-correo.js"
+    "correo:probar": "node scripts/probar-correo.js",
     "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --runInBand --detectOpenHandles",
     "test:unit": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest tests/unit/ --runInBand --detectOpenHandles",
     "test:integration": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest tests/integration/ --runInBand --detectOpenHandles",
@@ -30,7 +30,6 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.4",
     "resend": "^6.38.1"
-    "mongoose": "^9.10.4"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
