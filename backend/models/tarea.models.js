@@ -1,5 +1,22 @@
 const mongoose = require('mongoose');
 
+const subtareaSchema = new mongoose.Schema({
+    titulo: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    completada: {
+        type: Boolean,
+        default: false
+    },
+    asignadoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Usuario',
+        default: null
+    }
+});
+
 const tareaSchema = new mongoose.Schema({
     tableroId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -30,6 +47,14 @@ const tareaSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Usuario',
         default: null
+    },
+    etiquetas: {
+        type: [String],
+        default: []
+    },
+    subtareas: {
+        type: [subtareaSchema],
+        default: []
     }
 }, {
     timestamps: true,

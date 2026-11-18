@@ -1,13 +1,23 @@
 <script setup>
+import { computed } from 'vue'
 import AvatarUsuario from './AvatarUsuario.vue'
 import Icono from './Icono.vue'
 import PrioridadIndicador from './PrioridadIndicador.vue'
 import { fechaCorta } from '../utils/fechas'
 
-defineProps({
+const props = defineProps({
   tarea: { type: Object, required: true },
 })
 defineEmits(['editar'])
+
+const MAX_ETIQUETAS = 3
+
+const subtareasResumen = computed(() => {
+  const lista = props.tarea.subtareas || []
+  if (!lista.length) return null
+  const completadas = lista.filter((s) => s.completada).length
+  return { completadas, total: lista.length, todas: completadas === lista.length }
+})
 </script>
 
 <template>
@@ -20,9 +30,26 @@ defineEmits(['editar'])
   >
     <h3>{{ tarea.titulo }}</h3>
     <p v-if="tarea.descripcion">{{ tarea.descripcion }}</p>
+    <div v-if="tarea.etiquetas?.length" class="etiquetas">
+      <span v-for="etiqueta in tarea.etiquetas.slice(0, MAX_ETIQUETAS)" :key="etiqueta" class="etiqueta">
+        {{ etiqueta }}
+      </span>
+      <span v-if="tarea.etiquetas.length > MAX_ETIQUETAS" class="etiqueta extra">
+        +{{ tarea.etiquetas.length - MAX_ETIQUETAS }}
+      </span>
+    </div>
     <footer>
       <PrioridadIndicador :prioridad="tarea.prioridad" />
       <div class="derecha">
+        <span
+          v-if="subtareasResumen"
+          class="subtareas-badge"
+          :class="{ completas: subtareasResumen.todas }"
+          title="Subtareas completadas"
+        >
+          <Icono nombre="tareas" :tamano="12" />
+          {{ subtareasResumen.completadas }}/{{ subtareasResumen.total }}
+        </span>
         <span class="fecha">
           <Icono nombre="calendario" :tamano="12" />
           {{ fechaCorta(tarea.createdAt) }}
@@ -99,5 +126,36 @@ footer {
   gap: 0.3rem;
   color: var(--color-texto-3);
   font-size: 0.75rem;
+}
+.etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+.etiqueta {
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgb(99 102 241 / 0.28);
+  background: rgb(99 102 241 / 0.12);
+  color: var(--color-primario-claro);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.etiqueta.extra {
+  border-color: var(--color-borde-fuerte);
+  background: var(--color-superficie-3);
+  color: var(--color-texto-2);
+}
+.subtareas-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-texto-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.subtareas-badge.completas {
+  color: var(--estado-terminado);
 }
 </style>

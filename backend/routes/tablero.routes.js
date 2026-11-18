@@ -38,6 +38,13 @@ router.post(
     validarCampos,
     tableroController.invitar
 );
+router.delete(
+    '/:id/members/:usuarioId',
+    param('id').isMongoId().withMessage('ID de tablero inválido'),
+    param('usuarioId').isMongoId().withMessage('ID de usuario inválido'),
+    validarCampos,
+    tableroController.eliminarMiembro
+);
 router.get('/:id', validarIdTablero, tableroController.obtener);
 router.put('/:id', [...validarIdTablero.slice(0, -1), ...validarDatosTablero], tableroController.actualizar);
 router.delete('/:id', validarIdTablero, tableroController.eliminar);

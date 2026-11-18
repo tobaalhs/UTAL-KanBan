@@ -2,6 +2,7 @@ import http from '../api/http'
 
 export const ESTADOS = ['Pendiente', 'En curso', 'Terminado']
 export const PRIORIDADES = ['Alta', 'Media', 'Baja']
+export const ETIQUETAS_SUGERIDAS = ['Frontend', 'Backend', 'Bug', 'Diseño', 'Urgente', 'Documentación']
 
 export const listar = async (tableroId) => {
   const { data } = await http.get(`/v1/boards/${tableroId}`)
@@ -25,5 +26,10 @@ export const actualizarEstado = async (id, estado) => {
 
 export const eliminar = async (id) => {
   const { data } = await http.delete(`/v1/tasks/${id}`)
+  return data
+}
+
+export const listarEtiquetas = async () => {
+  const { data } = await http.get('/v1/tags')
   return data
 }

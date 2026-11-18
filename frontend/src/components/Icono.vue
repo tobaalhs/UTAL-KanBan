@@ -25,6 +25,7 @@ const iconos = {
   separador: '<path d="m9 18 6-6-6-6"/>',
   reloj: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   invitar: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  goma: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
 }
 </script>
 

@@ -49,9 +49,19 @@ const eliminar = async (req, res) => {
     }
 };
 
+const listarEtiquetas = async (req, res) => {
+    try {
+        const etiquetas = await tareaService.listarEtiquetasGlobales();
+        return res.status(200).json(etiquetas);
+    } catch (error) {
+        return responderError(res, error);
+    }
+};
+
 module.exports = {
     crear,
     actualizar,
     actualizarEstado,
-    eliminar
+    eliminar,
+    listarEtiquetas
 };

@@ -52,7 +52,18 @@ const login = async (req, res) => {
     }
 };
 
+const buscar = async (req, res) => {
+    try {
+        const q = typeof req.query.q === 'string' ? req.query.q : '';
+        const usuarios = await usuarioService.buscarUsuarios(q);
+        return res.status(200).json(usuarios);
+    } catch (error) {
+        return responderError(res, error);
+    }
+};
+
 module.exports = {
     registro,
-    login
+    login,
+    buscar
 };
