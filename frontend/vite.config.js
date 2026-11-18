@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
@@ -9,5 +10,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000',
     },
+  },
+  test: {
+    environment: 'happy-dom',
+    globals: true,
+    include: ['src/**/*.test.js'],
   },
 })
