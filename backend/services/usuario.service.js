@@ -51,7 +51,24 @@ const loginUsuario = async (email, password) => {
     return { usuario, token };
 };
 
+const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buscarUsuarios = async (termino = '', limite = 15) => {
+    const limpio = termino.trim();
+    if (!limpio) return [];
+
+    const regex = new RegExp(escaparRegex(limpio), 'i');
+    return User.find({
+        $or: [{ email: regex }, { nombre: regex }]
+    })
+        .select('_id nombre email')
+        .sort({ email: 1 })
+        .limit(limite)
+        .lean();
+};
+
 module.exports = {
     registrarUsuario,
-    loginUsuario
+    loginUsuario,
+    buscarUsuarios
 };

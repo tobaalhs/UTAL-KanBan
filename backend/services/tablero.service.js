@@ -3,7 +3,7 @@ const Tarea = require('../models/tarea.models');
 const Usuario = require('../models/usuario.models');
 const { crearErrorHttp } = require('../utils/errorHttp');
 const correoService = require('./correo.service');
-const serializarAsignado = require('../utils/serializarAsignado');
+const serializarTarea = require('../utils/serializarTarea');
 
 const serializarMiembro = (miembro, creadorId) => {
     const id = miembro._id.toString();
@@ -14,25 +14,6 @@ const serializarMiembro = (miembro, creadorId) => {
         nombre: miembro.nombre,
         email: miembro.email,
         esCreador: id === creadorId
-    };
-};
-
-const serializarTarea = (tarea) => {
-    const id = tarea._id.toString();
-    const tableroId = tarea.tableroId.toString();
-
-    return {
-        id,
-        _id: id,
-        tableroId,
-        tablero: tableroId,
-        titulo: tarea.titulo,
-        descripcion: tarea.descripcion,
-        estado: tarea.estado,
-        prioridad: tarea.prioridad,
-        asignado: serializarAsignado(tarea.asignadoId),
-        createdAt: tarea.createdAt,
-        updatedAt: tarea.updatedAt
     };
 };
 
@@ -154,6 +135,7 @@ const obtenerTablero = async (id, usuarioId) => {
     const tablero = await obtenerTableroMiembro(id, usuarioId);
     const tareas = await Tarea.find({ tableroId: tablero._id })
         .populate('asignadoId', 'nombre email')
+        .populate('subtareas.asignadoId', 'nombre email')
         .sort({ createdAt: 1 });
     return serializarTablero(tablero, { tareas });
 };
@@ -231,6 +213,48 @@ const listarMiembros = async (id, usuarioId) => {
     return tablero.miembros.map((miembro) => serializarMiembro(miembro, creadorId));
 };
 
+const eliminarMiembro = async (id, miembroId, usuarioId) => {
+    const tablero = await obtenerTableroMiembro(id, usuarioId);
+    const creadorId = tablero.creadorId.toString();
+
+    if (creadorId !== usuarioId) {
+        throw crearErrorHttp(403, 'Solo el creador del tablero puede eliminar miembros');
+    }
+
+    if (miembroId === creadorId) {
+        throw crearErrorHttp(400, 'No puedes eliminar al creador del tablero');
+    }
+
+    const resultado = await Tablero.updateOne(
+        { _id: tablero._id, miembros: miembroId },
+        { $pull: { miembros: miembroId } }
+    );
+
+    if (!resultado.modifiedCount) {
+        throw crearErrorHttp(404, 'El usuario no es miembro del tablero');
+    }
+
+    await Tarea.updateMany(
+        { tableroId: tablero._id, asignadoId: miembroId },
+        { $set: { asignadoId: null } }
+    );
+    await Tarea.updateMany(
+        { tableroId: tablero._id, 'subtareas.asignadoId': miembroId },
+        { $set: { 'subtareas.$[elem].asignadoId': null } },
+        { arrayFilters: [{ 'elem.asignadoId': miembroId }] }
+    );
+
+    const tableroActualizado = await Tablero.findById(tablero._id)
+        .populate('miembros', 'nombre email');
+
+    return {
+        message: 'Miembro eliminado del tablero',
+        ...serializarTablero(tableroActualizado, {
+            conteos: await obtenerConteosTablero(tablero._id)
+        })
+    };
+};
+
 module.exports = {
     crearTablero,
     listarTableros,
@@ -238,5 +262,6 @@ module.exports = {
     actualizarTablero,
     eliminarTablero,
     invitarMiembro,
-    listarMiembros
+    listarMiembros,
+    eliminarMiembro
 };

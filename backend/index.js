@@ -16,6 +16,7 @@ if (require.main === module) {
 const usuarioRoutes = require('./routes/usuario.routes');
 const tableroRoutes = require('./routes/tablero.routes');
 const tareaRoutes = require('./routes/tarea.routes');
+const usuarioController = require('./controllers/usuario.controller');
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -41,6 +42,7 @@ app.use(express.json());
 
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/v1', verificarToken);
+app.get('/api/v1/users', usuarioController.buscar);
 app.use('/api/v1/boards', tableroRoutes);
 app.use('/api/v1', tareaRoutes);
 

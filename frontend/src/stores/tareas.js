@@ -59,7 +59,7 @@ export const useTareasStore = defineStore('tareas', () => {
 
   // Orden dentro de una columna (solo visual, el backend no guarda orden)
   const reordenar = (estado, idsEnOrden) => {
-    const otras = lista.value.filter((t) => t.estado !== estado && !idsEnOrden.includes(t._id))
+    const otras = lista.value.filter((t) => !idsEnOrden.includes(t._id))
     const ordenadas = idsEnOrden.map(buscar).filter(Boolean)
     lista.value = [...otras, ...ordenadas]
   }

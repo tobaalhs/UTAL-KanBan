@@ -29,6 +29,32 @@ const validarDatosTarea = [
         .optional({ values: 'null' })
         .isMongoId()
         .withMessage('El usuario asignado no es válido'),
+    body('etiquetas')
+        .optional()
+        .isArray()
+        .withMessage('Las etiquetas deben ser una lista'),
+    body('etiquetas.*')
+        .isString().withMessage('Cada etiqueta debe ser texto')
+        .bail()
+        .trim()
+        .notEmpty().withMessage('Las etiquetas no pueden estar vacías'),
+    body('subtareas')
+        .optional()
+        .isArray()
+        .withMessage('Las subtareas deben ser una lista'),
+    body('subtareas.*.titulo')
+        .isString().withMessage('El título de la subtarea debe ser texto')
+        .bail()
+        .trim()
+        .notEmpty().withMessage('El título de la subtarea no puede estar vacío'),
+    body('subtareas.*.completada')
+        .optional()
+        .isBoolean()
+        .withMessage('El estado de la subtarea debe ser booleano'),
+    body('subtareas.*.asignadoId')
+        .optional({ values: 'null' })
+        .isMongoId()
+        .withMessage('El responsable de la subtarea no es válido'),
     validarCampos
 ];
 
@@ -54,6 +80,7 @@ router.patch(
     validarCampos,
     tareaController.actualizarEstado
 );
+router.get('/tags', tareaController.listarEtiquetas);
 router.delete('/tasks/:id', validarIdTarea, tareaController.eliminar);
 
 module.exports = router;

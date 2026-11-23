@@ -71,7 +71,12 @@ export const useResumenStore = defineStore('resumen', () => {
       }
     }
 
-    return [...personas.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    const yo = useAuthStore().usuario?._id
+    return [...personas.values()].sort((a, b) => {
+      if (a._id === yo && b._id !== yo) return -1
+      if (b._id === yo && a._id !== yo) return 1
+      return a.nombre.localeCompare(b.nombre, 'es')
+    })
   })
 
   return {

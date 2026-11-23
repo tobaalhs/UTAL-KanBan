@@ -29,3 +29,8 @@ export const invitar = async (id, email) => {
   const { data } = await http.post(`/v1/boards/${id}/members`, { email })
   return data
 }
+
+export const eliminarMiembro = async (id, usuarioId) => {
+  const { data } = await http.delete(`/v1/boards/${id}/members/${usuarioId}`)
+  return data
+}

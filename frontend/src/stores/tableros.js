@@ -43,6 +43,9 @@ export const useTablerosStore = defineStore('tableros', () => {
 
   const invitar = async (id, email) => reemplazar(await api.invitar(id, email))
 
+  const eliminarMiembro = async (id, usuarioId) =>
+    reemplazar(await api.eliminarMiembro(id, usuarioId))
+
   // Mantiene al dia el contador de tareas de la tarjeta del tablero
   const ajustarConteo = (id, delta) => {
     for (const t of [actual.value, lista.value.find((t) => t._id === id)]) {
@@ -66,6 +69,7 @@ export const useTablerosStore = defineStore('tableros', () => {
     actualizar,
     eliminar,
     invitar,
+    eliminarMiembro,
     ajustarConteo,
     ajustarTerminadas,
   }

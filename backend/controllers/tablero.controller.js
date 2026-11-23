@@ -72,6 +72,19 @@ const listarMiembros = async (req, res) => {
     }
 };
 
+const eliminarMiembro = async (req, res) => {
+    try {
+        const resultado = await tableroService.eliminarMiembro(
+            req.params.id,
+            req.params.usuarioId,
+            req.user.id
+        );
+        return res.status(200).json(resultado);
+    } catch (error) {
+        return responderError(res, error);
+    }
+};
+
 module.exports = {
     crear,
     listar,
@@ -79,5 +92,6 @@ module.exports = {
     actualizar,
     eliminar,
     invitar,
-    listarMiembros
+    listarMiembros,
+    eliminarMiembro
 };

@@ -1,28 +1,39 @@
 const Tablero = require('../models/tablero.models');
 const Tarea = require('../models/tarea.models');
 const { crearErrorHttp } = require('../utils/errorHttp');
-const serializarAsignado = require('../utils/serializarAsignado');
+const serializarTarea = require('../utils/serializarTarea');
 
 const CAMPOS_ASIGNADO = 'nombre email';
 
-const serializarTarea = (tarea) => {
-    const id = tarea._id.toString();
-    const tableroId = tarea.tableroId.toString();
-
-    return {
-        id,
-        _id: id,
-        tableroId,
-        tablero: tableroId,
-        titulo: tarea.titulo,
-        descripcion: tarea.descripcion,
-        prioridad: tarea.prioridad,
-        estado: tarea.estado,
-        asignado: serializarAsignado(tarea.asignadoId),
-        createdAt: tarea.createdAt,
-        updatedAt: tarea.updatedAt
-    };
+const normalizarEtiquetas = (etiquetas = []) => {
+    const vistas = new Set();
+    const resultado = [];
+    for (const item of etiquetas) {
+        if (typeof item !== 'string') continue;
+        const limpia = item.trim();
+        const clave = limpia.toLowerCase();
+        if (!limpia || vistas.has(clave)) continue;
+        vistas.add(clave);
+        resultado.push(limpia);
+    }
+    return resultado;
 };
+
+const normalizarSubtareas = (subtareas = [], tablero) =>
+    subtareas
+        .filter((s) => s && typeof s.titulo === 'string' && s.titulo.trim())
+        .map((s) => {
+            const asignadoId = s.asignadoId || null;
+            if (asignadoId) {
+                validarAsignado(tablero, asignadoId);
+            }
+            return {
+                ...(s._id ? { _id: s._id } : {}),
+                titulo: s.titulo.trim(),
+                completada: Boolean(s.completada),
+                asignadoId
+            };
+        });
 
 const obtenerTareaYTableroMiembro = async (id, usuarioId) => {
     const tarea = await Tarea.findById(id);
@@ -75,15 +86,24 @@ const crearTarea = async (boardId, datos, usuarioId) => {
         descripcion: datos.descripcion,
         prioridad: datos.prioridad,
         estado: 'Pendiente',
-        asignadoId
+        asignadoId,
+        etiquetas: normalizarEtiquetas(datos.etiquetas),
+        subtareas: normalizarSubtareas(datos.subtareas, tablero)
     });
 
-    await tarea.populate('asignadoId', CAMPOS_ASIGNADO);
+    await tarea.populate([
+        { path: 'asignadoId', select: CAMPOS_ASIGNADO },
+        { path: 'subtareas.asignadoId', select: CAMPOS_ASIGNADO }
+    ]);
     return serializarTarea(tarea);
 };
 
 const actualizarTarea = async (id, datos, usuarioId) => {
     const { tarea, tablero } = await obtenerTareaYTableroMiembro(id, usuarioId);
+
+    if (tarea.estado === 'Terminado') {
+        throw crearErrorHttp(409, 'Una tarea finalizada no se puede modificar');
+    }
 
     tarea.titulo = datos.titulo;
     if (datos.descripcion !== undefined) {
@@ -99,9 +119,18 @@ const actualizarTarea = async (id, datos, usuarioId) => {
         }
         tarea.asignadoId = datos.asignadoId;
     }
+    if (datos.etiquetas !== undefined) {
+        tarea.etiquetas = normalizarEtiquetas(datos.etiquetas);
+    }
+    if (datos.subtareas !== undefined) {
+        tarea.subtareas = normalizarSubtareas(datos.subtareas, tablero);
+    }
 
     await tarea.save();
-    await tarea.populate('asignadoId', CAMPOS_ASIGNADO);
+    await tarea.populate([
+        { path: 'asignadoId', select: CAMPOS_ASIGNADO },
+        { path: 'subtareas.asignadoId', select: CAMPOS_ASIGNADO }
+    ]);
     return serializarTarea(tarea);
 };
 
@@ -128,9 +157,17 @@ const eliminarTarea = async (id, usuarioId) => {
     await Tarea.deleteOne({ _id: tarea._id });
 };
 
+const listarEtiquetasGlobales = async () => {
+    const etiquetas = await Tarea.distinct('etiquetas');
+    return etiquetas
+        .filter((e) => typeof e === 'string' && e.trim())
+        .sort((a, b) => a.localeCompare(b, 'es'));
+};
+
 module.exports = {
     crearTarea,
     actualizarTarea,
     actualizarEstadoTarea,
-    eliminarTarea
+    eliminarTarea,
+    listarEtiquetasGlobales
 };
