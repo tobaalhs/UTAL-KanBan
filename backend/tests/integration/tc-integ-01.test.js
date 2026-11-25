@@ -289,4 +289,193 @@ describe('TC-INTEG-01: Integridad de datos y autorización de acceso a tableros 
       expect(res.body.mensaje.length).toBeGreaterThan(0);
     });
   });
+
+  // Bloque 5: Etiquetas, subtareas, filtros e inmutabilidad de tareas finalizadas
+  describe('Bloque 5: Etiquetas, subtareas, filtros y bloqueo de tareas finalizadas', () => {
+    it('19. Debe crear una tarea con etiquetas normalizadas (sin duplicados ni espacios) y listarlas en GET /api/v1/tags', async () => {
+      const resCrear = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea con Etiquetas',
+          prioridad: 'Alta',
+          etiquetas: ['  Backend ', 'backend', 'Urgente', 'Diseño']
+        });
+
+      expect(resCrear.status).toBe(201);
+      expect(resCrear.body.etiquetas).toEqual(['Backend', 'Urgente', 'Diseño']);
+
+      const resTags = await request(app)
+        .get('/api/v1/tags')
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(resTags.status).toBe(200);
+      expect(resTags.body).toEqual(['Backend', 'Diseño', 'Urgente']);
+    });
+
+    it('20. Debe rechazar con HTTP 400 etiquetas con formato inválido (vacías o no arreglo)', async () => {
+      const resNoArray = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Etiqueta Inválida',
+          etiquetas: 'no-es-lista'
+        });
+
+      expect(resNoArray.status).toBe(400);
+
+      const resVacia = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Etiqueta Vacía',
+          etiquetas: ['   ']
+        });
+
+      expect(resVacia.status).toBe(400);
+    });
+
+    it('21. Debe crear y actualizar subtareas con responsable miembro del tablero y poblar sus datos', async () => {
+      const resCrear = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea con Subtareas',
+          subtareas: [
+            {
+              titulo: 'Configurar base de datos',
+              completada: false,
+              asignadoId: datos.usuarioA._id.toString()
+            },
+            {
+              titulo: 'Crear componentes de filtro',
+              completada: true,
+              asignadoId: null
+            }
+          ]
+        });
+
+      expect(resCrear.status).toBe(201);
+      expect(resCrear.body.subtareas).toHaveLength(2);
+      expect(resCrear.body.subtareas[0].titulo).toBe('Configurar base de datos');
+      expect(resCrear.body.subtareas[0].completada).toBe(false);
+      expect(resCrear.body.subtareas[0].asignado).toMatchObject({
+        id: datos.usuarioA._id.toString(),
+        nombre: DATOS_SEMILLA.usuarioA.nombre,
+        email: DATOS_SEMILLA.usuarioA.email.toLowerCase()
+      });
+      expect(resCrear.body.subtareas[1].completada).toBe(true);
+      expect(resCrear.body.subtareas[1].asignado).toBeNull();
+    });
+
+    it('22. Debe rechazar con HTTP 400 una subtarea sin título o asignada a un usuario que no es miembro del tablero', async () => {
+      const resNoMiembro = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Subtarea Intruso',
+          subtareas: [
+            {
+              titulo: 'Subtarea asignada a Usuario B',
+              asignadoId: datos.usuarioB._id.toString()
+            }
+          ]
+        });
+
+      expect(resNoMiembro.status).toBe(400);
+      expect(resNoMiembro.body.mensaje).toBe('El usuario asignado no es miembro del tablero');
+
+      const resSinTitulo = await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Subtarea Sin Título',
+          subtareas: [{ titulo: '   ' }]
+        });
+
+      expect(resSinTitulo.status).toBe(400);
+    });
+
+    it('23. Al obtener el tablero se entregan los campos requeridos para los 3 filtros (asignado en tarea/subtarea, prioridad y etiquetas)', async () => {
+      // Invitar a Usuario B al tablero A para probar asignaciones cruzadas
+      await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/members`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ email: DATOS_SEMILLA.usuarioB.email });
+
+      await request(app)
+        .post(`/api/v1/boards/${datos.tableroA._id}/tasks`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Tarea Filtrable',
+          prioridad: 'Alta',
+          asignadoId: datos.usuarioA._id.toString(),
+          etiquetas: ['FiltroTag', 'Backend'],
+          subtareas: [
+            {
+              titulo: 'Subtarea de Usuario B',
+              completada: false,
+              asignadoId: datos.usuarioB._id.toString()
+            }
+          ]
+        });
+
+      const resTablero = await request(app)
+        .get(`/api/v1/boards/${datos.tableroA._id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+
+      expect(resTablero.status).toBe(200);
+      const tareaFiltrable = resTablero.body.tareas.find((t) => t.titulo === 'Tarea Filtrable');
+      expect(tareaFiltrable).toBeDefined();
+      expect(tareaFiltrable.prioridad).toBe('Alta');
+      expect(tareaFiltrable.etiquetas).toEqual(['FiltroTag', 'Backend']);
+      expect(tareaFiltrable.asignado.id).toBe(datos.usuarioA._id.toString());
+      expect(tareaFiltrable.subtareas[0].asignado.id).toBe(datos.usuarioB._id.toString());
+
+      // Al eliminar a Usuario B del tablero, se limpia su asignación tanto en tareas como en subtareas
+      const resEliminarMiembro = await request(app)
+        .delete(`/api/v1/boards/${datos.tableroA._id}/members/${datos.usuarioB._id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+      expect(resEliminarMiembro.status).toBe(200);
+
+      const resTableroDespues = await request(app)
+        .get(`/api/v1/boards/${datos.tableroA._id}`)
+        .set('Authorization', `Bearer ${tokenA}`);
+      const tareaDespues = resTableroDespues.body.tareas.find((t) => t.titulo === 'Tarea Filtrable');
+      expect(tareaDespues.subtareas[0].asignado).toBeNull();
+    });
+
+    it('24. Una tarea finalizada (estado "Terminado") no se puede modificar (responde HTTP 409 y conserva sus datos en BD)', async () => {
+      // 1. Marcar la tarea como Terminado
+      const resEstado = await request(app)
+        .patch(`/api/v1/tasks/${datos.tareaA._id}/status`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ estado: 'Terminado' });
+
+      expect(resEstado.status).toBe(200);
+      expect(resEstado.body.estado).toBe('Terminado');
+
+      // 2. Intentar modificar título, prioridad, etiquetas o subtareas mediante PUT
+      const resEditar = await request(app)
+        .put(`/api/v1/tasks/${datos.tareaA._id}`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          titulo: 'Título Modificado Ilegalmente',
+          descripcion: 'Nueva descripción',
+          prioridad: 'Alta',
+          etiquetas: ['Hack'],
+          subtareas: [{ titulo: 'Subtarea nueva' }]
+        });
+
+      expect(resEditar.status).toBe(409);
+      expect(resEditar.body.mensaje).toBe('Una tarea finalizada no se puede modificar');
+
+      // 3. Verificar en MongoDB que ningún campo fue modificado
+      const tareaEnDb = await Tarea.findById(datos.tareaA._id);
+      expect(tareaEnDb.titulo).toBe(DATOS_SEMILLA.tareaA.titulo);
+      expect(tareaEnDb.prioridad).toBe(DATOS_SEMILLA.tareaA.prioridad);
+      expect(tareaEnDb.etiquetas).toEqual([]);
+      expect(tareaEnDb.subtareas).toHaveLength(0);
+    });
+  });
 });
