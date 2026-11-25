@@ -4,9 +4,12 @@ import AvatarUsuario from './AvatarUsuario.vue'
 import Icono from './Icono.vue'
 import PrioridadIndicador from './PrioridadIndicador.vue'
 import { fechaCorta } from '../utils/fechas'
+import { colorUsuario } from '../utils/colorUsuario'
 
 const props = defineProps({
   tarea: { type: Object, required: true },
+  // Miembro que esta arrastrando esta tarjeta en otra pantalla (tiempo real)
+  arrastradaPor: { type: Object, default: null },
 })
 defineEmits(['editar'])
 
@@ -23,11 +26,13 @@ const subtareasResumen = computed(() => {
 <template>
   <article
     class="tarea"
-    :class="{ terminada: tarea.estado === 'Terminado' }"
+    :class="{ terminada: tarea.estado === 'Terminado', remota: arrastradaPor }"
+    :style="arrastradaPor ? { '--color-remoto': colorUsuario(arrastradaPor._id) } : null"
     tabindex="0"
     @click="$emit('editar')"
     @keydown.enter="$emit('editar')"
   >
+    <span v-if="arrastradaPor" class="marca-remota">{{ arrastradaPor.nombre }}</span>
     <h3>{{ tarea.titulo }}</h3>
     <p v-if="tarea.descripcion">{{ tarea.descripcion }}</p>
     <div v-if="tarea.etiquetas?.length" class="etiquetas">
@@ -73,6 +78,28 @@ const subtareasResumen = computed(() => {
   cursor: grab;
   user-select: none;
   transition: border-color var(--transicion), transform var(--transicion), background var(--transicion);
+}
+.tarea.remota {
+  position: relative;
+  border-color: var(--color-remoto);
+  box-shadow: 0 0 0 1px var(--color-remoto);
+  opacity: 0.75;
+}
+.marca-remota {
+  position: absolute;
+  top: -1px;
+  right: 10px;
+  max-width: 70%;
+  overflow: hidden;
+  padding: 0.05rem 0.5rem 0.1rem;
+  border-radius: 0 0 6px 6px;
+  background: var(--color-remoto);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tarea:hover {
   border-color: var(--color-borde-fuerte);

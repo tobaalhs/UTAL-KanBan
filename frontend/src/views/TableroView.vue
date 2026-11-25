@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { VueDraggable } from 'vue-draggable-plus'
 import EstadoIcono from '../components/EstadoIcono.vue'
@@ -15,6 +15,8 @@ import { useTablerosStore } from '../stores/tableros'
 import { useTareasStore } from '../stores/tareas'
 import { ESTADOS, ETIQUETAS_SUGERIDAS, PRIORIDADES, listarEtiquetas } from '../services/tareas'
 import { mensajeDeError } from '../api/http'
+import { useTableroEnVivo } from '../composables/useTableroEnVivo'
+import { colorUsuario } from '../utils/colorUsuario'
 
 const props = defineProps({
   id: { type: String, required: true },
@@ -105,8 +107,76 @@ const textoVacio = {
   Terminado: 'Las tareas completadas aparecerán aquí',
 }
 
+// ---------- Colaboracion en tiempo real ----------
+const { otrosPresentes, arrastres, iniciarArrastre, moverArrastre, terminarArrastre } = useTableroEnVivo(
+  computed(() => props.id),
+)
+const columnasEl = ref(null)
+const desplazamiento = ref(0)
+const nombresEnLinea = computed(() => otrosPresentes.value.map((u) => u.nombre).join(', '))
+
+// Arrastres de otros miembros: cursor con su nombre y la columna a la que apuntan
+const arrastresRemotos = computed(() =>
+  [...arrastres.entries()].map(([tareaId, a]) => ({
+    tareaId,
+    ...a,
+    color: colorUsuario(a.usuario?._id),
+    titulo: tareas.lista.find((t) => t._id === tareaId)?.titulo,
+  })),
+)
+const destinosRemotos = computed(() => {
+  const destinos = {}
+  for (const a of arrastresRemotos.value) {
+    const actual = tareas.lista.find((t) => t._id === a.tareaId)?.estado
+    if (a.estado && a.estado !== actual) destinos[a.estado] = a
+  }
+  return destinos
+})
+const posicionCursor = (a) => {
+  const el = columnasEl.value
+  if (!el || a.x == null || a.y == null) return null
+  const x = a.x * el.scrollWidth - desplazamiento.value
+  const y = a.y * el.clientHeight
+  return { transform: `translate(${x}px, ${y}px)`, '--color-remoto': a.color }
+}
+
+// Mi arrastre: posicion relativa al area de columnas (0..1) para que se vea igual en otras pantallas
+const alMoverPuntero = (evento) => {
+  const punto = evento.touches?.[0] ?? evento
+  const el = columnasEl.value
+  if (!el || punto.clientX == null || (punto.clientX === 0 && punto.clientY === 0)) return
+  const rect = el.getBoundingClientRect()
+  const columna = [...el.querySelectorAll('[data-estado]')].find((c) => {
+    const r = c.getBoundingClientRect()
+    return punto.clientX >= r.left && punto.clientX <= r.right
+  })
+  moverArrastre({
+    x: (punto.clientX - rect.left + el.scrollLeft) / el.scrollWidth,
+    y: (punto.clientY - rect.top) / rect.height,
+    estado: columna?.dataset.estado ?? null,
+  })
+}
+const EVENTOS_PUNTERO = ['dragover', 'pointermove', 'touchmove']
+const dejarDeSeguirPuntero = () => {
+  for (const tipo of EVENTOS_PUNTERO) window.removeEventListener(tipo, alMoverPuntero)
+}
+let guardandoMovimiento = false
+const alIniciarArrastre = (evento) => {
+  const id = evento.item?.dataset.id
+  if (!id) return
+  iniciarArrastre(id)
+  for (const tipo of EVENTOS_PUNTERO) window.addEventListener(tipo, alMoverPuntero, { passive: true })
+}
+const alTerminarArrastre = () => {
+  dejarDeSeguirPuntero()
+  // Si cambio de columna, el fin se avisa cuando el backend confirma (asi no "salta" en otras pantallas)
+  if (!guardandoMovimiento) terminarArrastre()
+}
+onBeforeUnmount(dejarDeSeguirPuntero)
+
 // RF17-RF19: al soltar en otra columna se persiste; si falla, el store revierte y avisamos
 const alSoltarEnColumna = async (evento, estado) => {
+  guardandoMovimiento = true
   await nextTick()
   // Reordenar y mover en el mismo tick para que la tarjeta no "parpadee" en la columna anterior
   tareas.reordenar(estado, columnas[estado].map((t) => t._id))
@@ -114,6 +184,9 @@ const alSoltarEnColumna = async (evento, estado) => {
     await tareas.mover(evento.data._id, estado)
   } catch {
     notificaciones.mostrar('No se pudo actualizar la tarea, intenta nuevamente')
+  } finally {
+    guardandoMovimiento = false
+    terminarArrastre()
   }
 }
 
@@ -218,6 +291,11 @@ const eliminarTablero = async () => {
         </div>
 
         <div class="acciones">
+          <div v-if="otrosPresentes.length" class="en-linea" :title="`Viendo ahora: ${nombresEnLinea}`">
+            <span class="punto-en-linea" aria-hidden="true"></span>
+            <GrupoAvatares :usuarios="otrosPresentes" :maximo="3" :tamano="24" />
+            <span class="sr-only">Viendo ahora: {{ nombresEnLinea }}</span>
+          </div>
           <div class="progreso" :title="`${progreso.terminadas} de ${progreso.total} tareas terminadas`">
             <span>{{ progreso.porcentaje }}%</span>
             <div class="barra"><div :style="{ width: `${progreso.porcentaje}%` }"></div></div>
@@ -242,48 +320,84 @@ const eliminarTablero = async () => {
       </div>
     </header>
 
-    <div class="columnas">
-      <section v-for="estado in ESTADOS" :key="estado" class="columna">
-        <header class="columna-encabezado">
-          <EstadoIcono :estado="estado" />
-          <h2>{{ estado }}</h2>
-          <span class="contador">{{ columnas[estado].length }}</span>
-          <button
-            v-if="estado === 'Pendiente'"
-            class="btn-icono agregar-rapido"
-            title="Agregar tarea"
-            aria-label="Agregar tarea"
-            @click="modal = 'nueva-tarea'"
-          >
-            <Icono nombre="mas" :tamano="16" />
-          </button>
-        </header>
+    <div class="area-columnas">
+      <div ref="columnasEl" class="columnas" @scroll="desplazamiento = $event.target.scrollLeft">
+        <section
+          v-for="estado in ESTADOS"
+          :key="estado"
+          class="columna"
+          :class="{ 'destino-remoto': destinosRemotos[estado] }"
+          :style="destinosRemotos[estado] ? { '--color-remoto': destinosRemotos[estado].color } : null"
+          :data-estado="estado"
+        >
+          <header class="columna-encabezado">
+            <EstadoIcono :estado="estado" />
+            <h2>{{ estado }}</h2>
+            <span class="contador">{{ columnas[estado].length }}</span>
+            <span v-if="destinosRemotos[estado]" class="aviso-destino">
+              {{ destinosRemotos[estado].usuario?.nombre?.split(' ')[0] }} mueve aquí
+            </span>
+            <button
+              v-if="estado === 'Pendiente'"
+              class="btn-icono agregar-rapido"
+              title="Agregar tarea"
+              aria-label="Agregar tarea"
+              @click="modal = 'nueva-tarea'"
+            >
+              <Icono nombre="mas" :tamano="16" />
+            </button>
+          </header>
 
-        <div class="columna-cuerpo">
-          <div v-if="!columnas[estado].length" class="vacio" aria-hidden="true">
-            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-              <rect x="6" y="9" width="32" height="10" rx="3" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
-              <rect x="6" y="25" width="32" height="10" rx="3" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" opacity=".5" />
-            </svg>
-            <span>{{ textoVacio[estado] }}</span>
+          <div class="columna-cuerpo">
+            <div v-if="!columnas[estado].length" class="vacio" aria-hidden="true">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <rect x="6" y="9" width="32" height="10" rx="3" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
+                <rect x="6" y="25" width="32" height="10" rx="3" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" opacity=".5" />
+              </svg>
+              <span>{{ textoVacio[estado] }}</span>
+            </div>
+
+            <VueDraggable
+              v-model="columnas[estado]"
+              class="lista"
+              group="tareas"
+              :animation="180"
+              :delay="150"
+              :delay-on-touch-only="true"
+              ghost-class="fantasma"
+              drag-class="arrastrando"
+              @start="alIniciarArrastre"
+              @end="alTerminarArrastre"
+              @add="alSoltarEnColumna($event, estado)"
+              @update="alReordenar(estado)"
+            >
+              <TareaCard
+                v-for="tarea in columnas[estado]"
+                :key="tarea._id"
+                :data-id="tarea._id"
+                :tarea="tarea"
+                :arrastrada-por="arrastres.get(tarea._id)?.usuario"
+                @editar="modal = { tarea }"
+              />
+            </VueDraggable>
           </div>
-
-          <VueDraggable
-            v-model="columnas[estado]"
-            class="lista"
-            group="tareas"
-            :animation="180"
-            :delay="150"
-            :delay-on-touch-only="true"
-            ghost-class="fantasma"
-            drag-class="arrastrando"
-            @add="alSoltarEnColumna($event, estado)"
-            @update="alReordenar(estado)"
-          >
-            <TareaCard v-for="tarea in columnas[estado]" :key="tarea._id" :tarea="tarea" @editar="modal = { tarea }" />
-          </VueDraggable>
+        </section>
         </div>
-      </section>
+
+      <!-- Cursores de otros miembros arrastrando tarjetas -->
+      <div class="capa-cursores" aria-hidden="true">
+        <div
+          v-for="a in arrastresRemotos"
+          v-show="posicionCursor(a)"
+          :key="a.tareaId"
+          class="cursor-remoto"
+          :style="posicionCursor(a)"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M2 2l5.5 14 2-6 6-2z" /></svg>
+          <span class="cursor-nombre">{{ a.usuario?.nombre }}</span>
+          <span v-if="a.titulo" class="cursor-tarjeta">{{ a.titulo }}</span>
+        </div>
+      </div>
     </div>
 
     <TareaModal
@@ -525,7 +639,40 @@ h1 {
   color: var(--color-texto-2);
 }
 
+/* ---------- En linea ---------- */
+.en-linea {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.4rem 0 0.6rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 999px;
+}
+.punto-en-linea {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--estado-terminado);
+  box-shadow: 0 0 0 3px rgb(34 197 94 / 0.18);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* ---------- Columnas ---------- */
+.area-columnas {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .columnas {
   flex: 1;
   display: grid;
@@ -543,6 +690,86 @@ h1 {
   border-radius: var(--radio-grande);
   background: rgb(21 23 34 / 0.6);
 }
+.columna {
+  transition:
+    border-color var(--transicion),
+    box-shadow var(--transicion);
+}
+.columna.destino-remoto {
+  border-color: var(--color-remoto);
+  box-shadow: 0 0 0 1px var(--color-remoto);
+}
+.aviso-destino {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-remoto);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Cursores remotos ---------- */
+.capa-cursores {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+.cursor-remoto {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  transition: transform 90ms linear;
+  will-change: transform;
+}
+.cursor-remoto svg {
+  fill: var(--color-remoto);
+  stroke: #fff;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.4));
+}
+.cursor-nombre {
+  margin: -0.2rem 0 0 0.9rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-remoto);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cursor-tarjeta {
+  max-width: 200px;
+  margin-left: 0.9rem;
+  padding: 0.45rem 0.65rem;
+  overflow: hidden;
+  border: 1px solid var(--color-remoto);
+  border-radius: var(--radio);
+  background: var(--color-superficie-2);
+  box-shadow: var(--sombra-elevada);
+  color: var(--color-texto);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.92;
+  transform: rotate(2deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor-remoto {
+    transition: none;
+  }
+}
 .columna-encabezado {
   display: flex;
   align-items: center;
@@ -551,6 +778,7 @@ h1 {
   padding: 0 0.6rem 0 0.95rem;
 }
 .columna-encabezado h2 {
+  white-space: nowrap;
   margin: 0;
   font-size: 0.875rem;
   font-weight: 600;
