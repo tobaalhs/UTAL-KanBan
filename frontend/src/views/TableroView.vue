@@ -852,31 +852,61 @@ h1 {
     gap: 0.9rem;
     padding: 1rem;
   }
-  .acciones {
-    flex-wrap: wrap;
-  }
   .titulo {
     flex: none;
-  }
-  .progreso {
-    margin-right: auto;
   }
   .titulo-fila .btn-icono {
     opacity: 1;
   }
 }
-@media (max-width: 768px) {
-  .pagina {
-    height: auto;
+/* Tablet: si no caben las 3 columnas se desplazan en horizontal y encajan al soltar el scroll */
+@media (max-width: 1020px) {
+  /* Cuando las acciones bajan a su propia fila: progreso a la izquierda y botones a la derecha */
+  .acciones {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+  .progreso {
+    margin-right: auto;
   }
   .columnas {
-    grid-template-columns: repeat(3, 85vw);
+    grid-template-columns: repeat(3, minmax(215px, 1fr));
+    gap: 0.75rem;
     padding: 1rem;
     scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
   }
   .columna {
     scroll-snap-align: start;
-    max-height: 70vh;
+  }
+}
+/* Movil: la barra lateral pasa arriba (~57px) y el tablero ocupa el resto de la pantalla */
+@media (max-width: 768px) {
+  .pagina {
+    height: auto;
+    min-height: calc(100dvh - 57px);
+  }
+  .columnas {
+    grid-template-columns: repeat(3, calc((100% - 0.75rem) / 2));
+  }
+  .columna {
+    min-height: 320px;
+  }
+}
+/* Telefono: una columna por pantalla, asomando la siguiente */
+@media (max-width: 520px) {
+  .encabezado {
+    padding: 0.85rem 1rem;
+  }
+  h1 {
+    font-size: 1.2rem;
+  }
+  .columnas {
+    grid-template-columns: repeat(3, 86%);
+  }
+  .acciones .btn-primario {
+    padding: 0 0.7rem;
   }
 }
 </style>
