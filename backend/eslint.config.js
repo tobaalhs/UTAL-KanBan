@@ -6,6 +6,8 @@ module.exports = [
       sourceType: 'commonjs',
       globals: {
         URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
         console: 'readonly',
         process: 'readonly',
         module: 'readonly',

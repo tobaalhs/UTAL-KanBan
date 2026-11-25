@@ -2,6 +2,7 @@ const Tablero = require('../models/tablero.models');
 const Tarea = require('../models/tarea.models');
 const { crearErrorHttp } = require('../utils/errorHttp');
 const serializarTarea = require('../utils/serializarTarea');
+const { emitirATablero } = require('../realtime/socket');
 
 const CAMPOS_ASIGNADO = 'nombre email';
 
@@ -95,7 +96,9 @@ const crearTarea = async (boardId, datos, usuarioId) => {
         { path: 'asignadoId', select: CAMPOS_ASIGNADO },
         { path: 'subtareas.asignadoId', select: CAMPOS_ASIGNADO }
     ]);
-    return serializarTarea(tarea);
+    const creada = serializarTarea(tarea);
+    emitirATablero(tablero._id, 'tarea:creada', creada);
+    return creada;
 };
 
 const actualizarTarea = async (id, datos, usuarioId) => {
@@ -131,13 +134,16 @@ const actualizarTarea = async (id, datos, usuarioId) => {
         { path: 'asignadoId', select: CAMPOS_ASIGNADO },
         { path: 'subtareas.asignadoId', select: CAMPOS_ASIGNADO }
     ]);
-    return serializarTarea(tarea);
+    const actualizada = serializarTarea(tarea);
+    emitirATablero(tablero._id, 'tarea:actualizada', actualizada);
+    return actualizada;
 };
 
 const actualizarEstadoTarea = async (id, estado, usuarioId) => {
     const { tarea } = await obtenerTareaYTableroMiembro(id, usuarioId);
     tarea.estado = estado;
     await tarea.save();
+    emitirATablero(tarea.tableroId, 'tarea:movida', { _id: tarea._id.toString(), estado: tarea.estado });
 
     return {
         id: tarea._id.toString(),
@@ -155,6 +161,7 @@ const eliminarTarea = async (id, usuarioId) => {
     }
 
     await Tarea.deleteOne({ _id: tarea._id });
+    emitirATablero(tablero._id, 'tarea:eliminada', { _id: tarea._id.toString() });
 };
 
 const listarEtiquetasGlobales = async () => {

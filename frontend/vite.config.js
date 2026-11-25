@@ -9,6 +9,8 @@ export default defineConfig({
     // Redirige las peticiones /api al backend Express para evitar problemas de CORS en desarrollo
     proxy: {
       '/api': 'http://localhost:3000',
+      // Socket.IO (tiempo real) usa WebSocket
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
   test: {
