@@ -1,19 +1,13 @@
 <script setup>
 import { computed } from 'vue'
+import { colorUsuario } from '../utils/colorUsuario'
 
 const props = defineProps({
   usuario: { type: Object, required: true },
   tamano: { type: Number, default: 26 },
 })
 
-const colores = ['#f59e0b', '#ec4899', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f97316', '#6366f1']
-
-// El mismo usuario siempre obtiene el mismo color
-const color = computed(() => {
-  const id = props.usuario._id || ''
-  const hash = [...id].reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return colores[hash % colores.length]
-})
+const color = computed(() => colorUsuario(props.usuario._id))
 </script>
 
 <template>

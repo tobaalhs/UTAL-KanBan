@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db.config');
+const http = require('http');
 const verificarToken = require('./middlewares/verificarToken');
+const corsOptions = require('./config/cors.config');
+const { iniciarTiempoReal } = require('./realtime/socket');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,25 +20,6 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const tableroRoutes = require('./routes/tablero.routes');
 const tareaRoutes = require('./routes/tarea.routes');
 const usuarioController = require('./controllers/usuario.controller');
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    let url;
-    try {
-      url = new URL(origin);
-    } catch (error) {
-      return callback(null, false);
-    }
-
-    const esLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-    const esVercel = url.protocol === 'https:' && url.hostname.endsWith('.vercel.app');
-    return callback(null, esLocalhost || esVercel);
-  }
-};
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -52,7 +36,10 @@ app.get('/', (req, res) => {
 });
 
 if (require.main === module) {
-  app.listen(port, () => {
+  // Express y Socket.IO comparten el mismo servidor HTTP
+  const servidor = http.createServer(app);
+  iniciarTiempoReal(servidor);
+  servidor.listen(port, () => {
     process.stdout.write(`Servidor corriendo en el puerto ${port}\n`);
   });
 }
